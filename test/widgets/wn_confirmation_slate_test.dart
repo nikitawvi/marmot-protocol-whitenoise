@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:whitenoise/widgets/wn_button.dart';
@@ -83,29 +85,6 @@ void main() {
       expect(cancelled, true);
     });
 
-    testWidgets('cancel button dismisses slate', (tester) async {
-      bool? result;
-
-      await mountTestApp(tester);
-
-      final context = tester.element(find.byType(Scaffold));
-
-      WnConfirmationSlate.show(
-        context: context,
-        title: 'Test Title',
-        message: 'Test Message',
-        confirmText: 'Confirm',
-        cancelText: 'Cancel',
-      ).then((value) => result = value);
-
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('cancel_button')));
-      await tester.pumpAndSettle();
-
-      expect(result, false);
-    });
-
     testWidgets('uses destructive button style when isDestructive is true', (tester) async {
       await mountWidget(
         WnConfirmationSlate(
@@ -126,27 +105,190 @@ void main() {
       expect(confirmButton.type, WnButtonType.destructive);
     });
 
-    testWidgets('show returns true when confirmed', (tester) async {
-      bool? result;
+    testWidgets('loading state disables cancel button', (tester) async {
+      await mountWidget(
+        WnConfirmationSlate(
+          title: 'Test Title',
+          message: 'Test Message',
+          confirmText: 'Confirm',
+          cancelText: 'Cancel',
+          onConfirm: () {},
+          onCancel: () {},
+          loading: true,
+        ),
+        tester,
+      );
 
-      await mountTestApp(tester);
+      final cancelButton = tester.widget<WnButton>(find.byKey(const Key('cancel_button')));
+      expect(cancelButton.disabled, true);
+    });
 
-      final context = tester.element(find.byType(Scaffold));
+    testWidgets('loading state shows loading on confirm button', (tester) async {
+      await mountWidget(
+        WnConfirmationSlate(
+          title: 'Test Title',
+          message: 'Test Message',
+          confirmText: 'Confirm',
+          cancelText: 'Cancel',
+          onConfirm: () {},
+          onCancel: () {},
+          loading: true,
+        ),
+        tester,
+      );
 
-      WnConfirmationSlate.show(
-        context: context,
-        title: 'Test Title',
-        message: 'Test Message',
-        confirmText: 'Confirm',
-        cancelText: 'Cancel',
-      ).then((value) => result = value);
+      final confirmButton = tester.widget<WnButton>(find.byKey(const Key('confirm_button')));
+      expect(confirmButton.loading, true);
+      expect(confirmButton.disabled, true);
+    });
 
-      await tester.pumpAndSettle();
+    testWidgets('loading state hides back button', (tester) async {
+      await mountWidget(
+        WnConfirmationSlate(
+          title: 'Test Title',
+          message: 'Test Message',
+          confirmText: 'Confirm',
+          cancelText: 'Cancel',
+          onConfirm: () {},
+          onCancel: () {},
+          loading: true,
+        ),
+        tester,
+      );
 
-      await tester.tap(find.byKey(const Key('confirm_button')));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('slate_back_button')), findsNothing);
+    });
 
-      expect(result, true);
+    group('async confirmation', () {
+      testWidgets('show with onConfirmAsync shows loading on confirm button', (tester) async {
+        final completer = Completer<bool>();
+
+        await mountTestApp(tester);
+
+        final context = tester.element(find.byType(Scaffold));
+
+        WnConfirmationSlate.show(
+          context: context,
+          title: 'Test Title',
+          message: 'Test Message',
+          confirmText: 'Confirm',
+          cancelText: 'Cancel',
+          onConfirmAsync: () => completer.future,
+        );
+
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('confirm_button')));
+        await tester.pump();
+
+        final confirmButton = tester.widget<WnButton>(find.byKey(const Key('confirm_button')));
+        expect(confirmButton.loading, true);
+
+        completer.complete(true);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('show with onConfirmAsync returns true on success', (tester) async {
+        bool? result;
+
+        await mountTestApp(tester);
+
+        final context = tester.element(find.byType(Scaffold));
+
+        WnConfirmationSlate.show(
+          context: context,
+          title: 'Test Title',
+          message: 'Test Message',
+          confirmText: 'Confirm',
+          cancelText: 'Cancel',
+          onConfirmAsync: () async => true,
+        ).then((value) => result = value);
+
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('confirm_button')));
+        await tester.pumpAndSettle();
+
+        expect(result, true);
+      });
+
+      testWidgets('show with onConfirmAsync returns false on failure', (tester) async {
+        bool? result;
+
+        await mountTestApp(tester);
+
+        final context = tester.element(find.byType(Scaffold));
+
+        WnConfirmationSlate.show(
+          context: context,
+          title: 'Test Title',
+          message: 'Test Message',
+          confirmText: 'Confirm',
+          cancelText: 'Cancel',
+          onConfirmAsync: () async => false,
+        ).then((value) => result = value);
+
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('confirm_button')));
+        await tester.pumpAndSettle();
+
+        expect(result, false);
+      });
+
+      testWidgets('show with onConfirmAsync returns null on cancel', (tester) async {
+        bool? result = true;
+
+        await mountTestApp(tester);
+
+        final context = tester.element(find.byType(Scaffold));
+
+        WnConfirmationSlate.show(
+          context: context,
+          title: 'Test Title',
+          message: 'Test Message',
+          confirmText: 'Confirm',
+          cancelText: 'Cancel',
+          onConfirmAsync: () async => true,
+        ).then((value) => result = value);
+
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('cancel_button')));
+        await tester.pumpAndSettle();
+
+        expect(result, isNull);
+      });
+
+      testWidgets('show with onConfirmAsync disables dismiss during loading', (tester) async {
+        final completer = Completer<bool>();
+
+        await mountTestApp(tester);
+
+        final context = tester.element(find.byType(Scaffold));
+
+        WnConfirmationSlate.show(
+          context: context,
+          title: 'Test Title',
+          message: 'Test Message',
+          confirmText: 'Confirm',
+          cancelText: 'Cancel',
+          onConfirmAsync: () => completer.future,
+        );
+
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('confirm_button')));
+        await tester.pump();
+
+        final cancelButton = tester.widget<WnButton>(find.byKey(const Key('cancel_button')));
+        expect(cancelButton.disabled, true);
+
+        expect(find.byKey(const Key('slate_back_button')), findsNothing);
+
+        completer.complete(true);
+        await tester.pumpAndSettle();
+      });
     });
   });
 }
