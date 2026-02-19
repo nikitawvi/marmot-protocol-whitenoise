@@ -927,4 +927,97 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get retry => 'Réessayer';
+
+  @override
+  String get groupInformation => 'Informations du groupe';
+
+  @override
+  String get editGroup => 'Modifier le groupe';
+
+  @override
+  String get editGroupAction => 'Modifier le groupe';
+
+  @override
+  String get groupNameLabel => 'Nom';
+
+  @override
+  String get groupDescriptionLabel => 'À propos';
+
+  @override
+  String membersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Membres',
+      one: '1 Membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminBadge => 'Admin';
+
+  @override
+  String get membersLabel => 'Membres :';
+
+  @override
+  String get memberBadge => 'Membre';
+
+  @override
+  String get sendMessage => 'Envoyer un message';
+
+  @override
+  String get makeAdmin => 'Rendre admin';
+
+  @override
+  String get removeAdminRole => 'Retirer admin';
+
+  @override
+  String get removeFromGroup => 'Retirer du groupe';
+
+  @override
+  String get removeFromGroupConfirmation => 'Retirer du groupe ?';
+
+  @override
+  String get removeFromGroupWarning =>
+      'Ce membre sera retiré du groupe et ne pourra plus voir les nouveaux messages.';
+
+  @override
+  String get makeAdminConfirmation => 'Rendre admin ?';
+
+  @override
+  String get makeAdminWarning =>
+      'Ce membre pourra gérer le groupe, ajouter ou retirer des membres et modifier les paramètres du groupe.';
+
+  @override
+  String get removeAdminConfirmation => 'Retirer admin ?';
+
+  @override
+  String get removeAdminWarning =>
+      'Ce membre ne pourra plus gérer le groupe, ajouter ou retirer des membres ni modifier les paramètres du groupe.';
+
+  @override
+  String get failedToRemoveFromGroup => 'Impossible de retirer le membre. Veuillez réessayer.';
+
+  @override
+  String get failedToMakeAdmin => 'Impossible de rendre admin. Veuillez réessayer.';
+
+  @override
+  String get failedToRemoveAdmin => 'Impossible de retirer admin. Veuillez réessayer.';
+
+  @override
+  String get groupUpdatedSuccessfully => 'Groupe mis à jour avec succès';
+
+  @override
+  String get groupLoadError => 'Impossible de charger le groupe. Veuillez réessayer.';
+
+  @override
+  String get groupSaveError => 'Impossible de sauvegarder le groupe. Veuillez réessayer.';
+
+  @override
+  String get failedToFetchGroupMembers =>
+      'Impossible de charger les membres du groupe. Veuillez réessayer.';
+
+  @override
+  String get failedToAddMembers => 'Impossible d\'ajouter des membres. Veuillez réessayer.';
 }

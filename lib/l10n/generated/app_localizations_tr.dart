@@ -919,4 +919,96 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get retry => 'Yeniden dene';
+
+  @override
+  String get groupInformation => 'Grup Bilgileri';
+
+  @override
+  String get editGroup => 'Grubu düzenle';
+
+  @override
+  String get editGroupAction => 'Grubu düzenle';
+
+  @override
+  String get groupNameLabel => 'Ad';
+
+  @override
+  String get groupDescriptionLabel => 'Hakkında';
+
+  @override
+  String membersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Üye',
+      one: '1 Üye',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminBadge => 'Yönetici';
+
+  @override
+  String get membersLabel => 'Üyeler:';
+
+  @override
+  String get memberBadge => 'Üye';
+
+  @override
+  String get sendMessage => 'Mesaj gönder';
+
+  @override
+  String get makeAdmin => 'Yönetici yap';
+
+  @override
+  String get removeAdminRole => 'Yöneticilikten çıkar';
+
+  @override
+  String get removeFromGroup => 'Gruptan çıkar';
+
+  @override
+  String get removeFromGroupConfirmation => 'Gruptan çıkarılsın mı?';
+
+  @override
+  String get removeFromGroupWarning =>
+      'Bu üye gruptan çıkarılacak ve artık yeni mesajları göremeyecek.';
+
+  @override
+  String get makeAdminConfirmation => 'Yönetici yapılsın mı?';
+
+  @override
+  String get makeAdminWarning =>
+      'Bu üye grubu yönetebilecek, üye ekleyip çıkarabilecek ve grup ayarlarını değiştirebilecek.';
+
+  @override
+  String get removeAdminConfirmation => 'Yöneticilik kaldırılsın mı?';
+
+  @override
+  String get removeAdminWarning =>
+      'Bu üye artık grubu yönetemeyecek, üye ekleyip çıkaramayacak veya grup ayarlarını değiştiremeyecek.';
+
+  @override
+  String get failedToRemoveFromGroup => 'Üye çıkarılamadı. Lütfen tekrar deneyin.';
+
+  @override
+  String get failedToMakeAdmin => 'Yönetici yapılamadı. Lütfen tekrar deneyin.';
+
+  @override
+  String get failedToRemoveAdmin => 'Yöneticilik kaldırılamadı. Lütfen tekrar deneyin.';
+
+  @override
+  String get groupUpdatedSuccessfully => 'Grup başarıyla güncellendi';
+
+  @override
+  String get groupLoadError => 'Grup yüklenemedi. Lütfen tekrar deneyin.';
+
+  @override
+  String get groupSaveError => 'Grup kaydedilemedi. Lütfen tekrar deneyin.';
+
+  @override
+  String get failedToFetchGroupMembers => 'Grup üyeleri yüklenemedi. Lütfen tekrar deneyin.';
+
+  @override
+  String get failedToAddMembers => 'Üye eklenemedi. Lütfen tekrar deneyin.';
 }

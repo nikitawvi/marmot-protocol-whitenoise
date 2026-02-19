@@ -939,4 +939,99 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get retry => 'Erneut versuchen';
+
+  @override
+  String get groupInformation => 'Gruppeninformationen';
+
+  @override
+  String get editGroup => 'Gruppe bearbeiten';
+
+  @override
+  String get editGroupAction => 'Gruppe bearbeiten';
+
+  @override
+  String get groupNameLabel => 'Name';
+
+  @override
+  String get groupDescriptionLabel => 'Über';
+
+  @override
+  String membersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Mitglieder',
+      one: '1 Mitglied',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminBadge => 'Admin';
+
+  @override
+  String get membersLabel => 'Mitglieder:';
+
+  @override
+  String get memberBadge => 'Mitglied';
+
+  @override
+  String get sendMessage => 'Nachricht senden';
+
+  @override
+  String get makeAdmin => 'Zum Admin machen';
+
+  @override
+  String get removeAdminRole => 'Admin entfernen';
+
+  @override
+  String get removeFromGroup => 'Aus Gruppe entfernen';
+
+  @override
+  String get removeFromGroupConfirmation => 'Aus Gruppe entfernen?';
+
+  @override
+  String get removeFromGroupWarning =>
+      'Dieses Mitglied wird aus der Gruppe entfernt und kann keine neuen Nachrichten mehr sehen.';
+
+  @override
+  String get makeAdminConfirmation => 'Zum Admin machen?';
+
+  @override
+  String get makeAdminWarning =>
+      'Dieses Mitglied kann die Gruppe verwalten, Mitglieder hinzufügen oder entfernen und Gruppeneinstellungen ändern.';
+
+  @override
+  String get removeAdminConfirmation => 'Admin entfernen?';
+
+  @override
+  String get removeAdminWarning =>
+      'Dieses Mitglied kann die Gruppe nicht mehr verwalten, keine Mitglieder hinzufügen oder entfernen und keine Gruppeneinstellungen ändern.';
+
+  @override
+  String get failedToRemoveFromGroup =>
+      'Mitglied konnte nicht entfernt werden. Bitte erneut versuchen.';
+
+  @override
+  String get failedToMakeAdmin => 'Admin konnte nicht ernannt werden. Bitte erneut versuchen.';
+
+  @override
+  String get failedToRemoveAdmin => 'Admin konnte nicht entfernt werden. Bitte erneut versuchen.';
+
+  @override
+  String get groupUpdatedSuccessfully => 'Gruppe erfolgreich aktualisiert';
+
+  @override
+  String get groupLoadError => 'Gruppe konnte nicht geladen werden. Bitte erneut versuchen.';
+
+  @override
+  String get groupSaveError => 'Gruppe konnte nicht gespeichert werden. Bitte erneut versuchen.';
+
+  @override
+  String get failedToFetchGroupMembers =>
+      'Gruppenmitglieder konnten nicht geladen werden. Bitte erneut versuchen.';
+
+  @override
+  String get failedToAddMembers =>
+      'Mitglieder konnten nicht hinzugefügt werden. Bitte erneut versuchen.';
 }
