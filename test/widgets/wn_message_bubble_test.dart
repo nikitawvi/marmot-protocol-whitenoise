@@ -226,6 +226,49 @@ void main() {
         final widget = tester.widget<WnReaction>(find.byType(WnReaction));
         expect(widget.type, WnReactionType.incoming);
       });
+
+      testWidgets('renders reactions in stable alphabetical order regardless of input order', (
+        tester,
+      ) async {
+        final reactions = [
+          EmojiReaction(emoji: '🔥', count: BigInt.one, users: const []),
+          EmojiReaction(emoji: '❤️', count: BigInt.one, users: const []),
+          EmojiReaction(emoji: '👍', count: BigInt.one, users: const []),
+        ];
+        await mountWidget(
+          WnMessageBubble(
+            direction: MessageDirection.incoming,
+            isDeleted: false,
+            reactions: reactions,
+          ),
+          tester,
+        );
+
+        final widgets = tester.widgetList<WnReaction>(find.byType(WnReaction)).toList();
+        final emojis = widgets.map((w) => w.emoji).toList();
+        final expectedEmojis = ['❤️', '👍', '🔥'];
+        expect(emojis, equals(expectedEmojis));
+      });
+
+      testWidgets('assigns ValueKey with emoji to each WnReaction for stable reconciliation', (
+        tester,
+      ) async {
+        final reactions = [
+          EmojiReaction(emoji: '👍', count: BigInt.one, users: const []),
+          EmojiReaction(emoji: '❤️', count: BigInt.from(2), users: const []),
+        ];
+        await mountWidget(
+          WnMessageBubble(
+            direction: MessageDirection.incoming,
+            isDeleted: false,
+            reactions: reactions,
+          ),
+          tester,
+        );
+
+        expect(find.byKey(const ValueKey('👍')), findsOneWidget);
+        expect(find.byKey(const ValueKey('❤️')), findsOneWidget);
+      });
     });
 
     group('replyContent', () {
@@ -610,6 +653,128 @@ void main() {
 
         expect(bottomWithTail, greaterThan(bottomWithoutTail));
       });
+    });
+
+    group('two-row reactions layout', () {
+      List<EmojiReaction> manyReactions() => [
+        EmojiReaction(emoji: '👍', count: BigInt.one, users: const []),
+        EmojiReaction(emoji: '❤️', count: BigInt.one, users: const []),
+        EmojiReaction(emoji: '😂', count: BigInt.one, users: const []),
+        EmojiReaction(emoji: '😮', count: BigInt.one, users: const []),
+        EmojiReaction(emoji: '😢', count: BigInt.one, users: const []),
+        EmojiReaction(emoji: '🎉', count: BigInt.one, users: const []),
+        EmojiReaction(emoji: '🔥', count: BigInt.one, users: const []),
+        EmojiReaction(emoji: '👏', count: BigInt.one, users: const []),
+      ];
+
+      testWidgets(
+        'outgoing: timestamp right edge aligns with bubble right edge when reactions wrap',
+        (tester) async {
+          await mountWidget(
+            WnMessageBubble(
+              direction: MessageDirection.outgoing,
+              isDeleted: false,
+              showTail: true,
+              content: 'Hi',
+              timestamp: '12:00',
+              reactions: manyReactions(),
+            ),
+            tester,
+          );
+
+          final containerRight = tester
+              .getRect(
+                find
+                    .descendant(
+                      of: find.byType(WnMessageBubble),
+                      matching: find.byType(Container),
+                    )
+                    .first,
+              )
+              .right;
+          final tsRight = tester.getRect(find.text('12:00')).right;
+          expect(
+            containerRight - tsRight,
+            lessThan(50),
+            reason: 'timestamp must be near the bubble right edge',
+          );
+        },
+      );
+
+      testWidgets(
+        'outgoing with tail: tail bottom is flush with container bottom when reactions wrap',
+        (tester) async {
+          await mountWidget(
+            WnMessageBubble(
+              direction: MessageDirection.outgoing,
+              isDeleted: false,
+              showTail: true,
+              content: 'Hi',
+              timestamp: '12:00',
+              reactions: manyReactions(),
+            ),
+            tester,
+          );
+
+          final containerBottom = tester
+              .getRect(
+                find
+                    .descendant(
+                      of: find.byType(WnMessageBubble),
+                      matching: find.byType(Container),
+                    )
+                    .first,
+              )
+              .bottom;
+          final tailBottom = tester.getRect(_findTail()).bottom;
+
+          expect(
+            (tailBottom - containerBottom).abs(),
+            lessThanOrEqualTo(1.0),
+            reason: 'tail must be flush with the bubble bottom — no gap',
+          );
+        },
+      );
+
+      testWidgets(
+        'all reactions are rendered inside the bubble container bounds',
+        (tester) async {
+          await mountWidget(
+            WnMessageBubble(
+              direction: MessageDirection.outgoing,
+              isDeleted: false,
+              showTail: true,
+              content: 'Hi',
+              timestamp: '12:00',
+              reactions: manyReactions(),
+            ),
+            tester,
+          );
+
+          final containerRect = tester.getRect(
+            find
+                .descendant(
+                  of: find.byType(WnMessageBubble),
+                  matching: find.byType(Container),
+                )
+                .first,
+          );
+
+          final reactionRects = tester
+              .widgetList<WnReaction>(find.byType(WnReaction))
+              .map((w) => tester.getRect(find.byWidget(w)))
+              .toList();
+
+          expect(reactionRects, isNotEmpty);
+          for (final rect in reactionRects) {
+            expect(
+              containerRect.overlaps(rect),
+              isTrue,
+              reason: 'reaction at $rect must be inside container $containerRect',
+            );
+          }
+        },
+      );
     });
 
     group('tail', () {
