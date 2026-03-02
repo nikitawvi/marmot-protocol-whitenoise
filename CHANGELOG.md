@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix media modal blurhash issue [PR #397](https://github.com/marmot-protocol/whitenoise/pull/397)
 - Added missing error translations for relay urls [PR #396](https://github.com/marmot-protocol/whitenoise/pull/396)
 
+- Fix positioning of error notice in chat screen [PR #409](https://github.com/marmot-protocol/whitenoise/pull/409)
+
 ### Security
 
 ## [0.3.0] - 2026-02-23

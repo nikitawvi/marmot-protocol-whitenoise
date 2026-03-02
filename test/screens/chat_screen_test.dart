@@ -22,6 +22,7 @@ import 'package:whitenoise/widgets/chat_media_upload_preview.dart';
 import 'package:whitenoise/widgets/chat_message_quote.dart';
 import 'package:whitenoise/widgets/wn_avatar.dart';
 import 'package:whitenoise/widgets/wn_message_bubble.dart';
+import 'package:whitenoise/widgets/wn_slate.dart';
 import 'package:whitenoise/widgets/wn_system_notice.dart';
 
 import '../mocks/mock_wn_api.dart';
@@ -584,6 +585,20 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.byType(WnSystemNotice), findsNothing);
+        });
+
+        testWidgets('system notice is rendered inside WnSlate', (tester) async {
+          await attemptSend(tester);
+
+          final noticeFinder = find.byType(WnSystemNotice);
+          expect(noticeFinder, findsOneWidget);
+          expect(
+            find.ancestor(
+              of: noticeFinder,
+              matching: find.byType(WnSlate),
+            ),
+            findsOneWidget,
+          );
         });
       });
     });
