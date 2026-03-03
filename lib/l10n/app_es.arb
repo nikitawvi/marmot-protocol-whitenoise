@@ -1,4 +1,5 @@
 {
+  "photoCount": "{count, plural, =1{Foto} other{Fotos}}",
   "@@locale": "es",
   "appTitle": "White Noise",
   "sloganDecentralized": "Descentralizado",

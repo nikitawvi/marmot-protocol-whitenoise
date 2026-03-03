@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -23,6 +24,7 @@ class WnChatListItem extends HookWidget {
     this.onLongPress,
     this.isSelected = false,
     this.prefixSubtitle,
+    this.subtitleIcon,
   });
 
   final String title;
@@ -39,6 +41,7 @@ class WnChatListItem extends HookWidget {
   final VoidCallback? onLongPress;
   final bool isSelected;
   final String? prefixSubtitle;
+  final Widget? subtitleIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +126,18 @@ class WnChatListItem extends HookWidget {
                                       color: colors.backgroundContentPrimary,
                                     ),
                                   ),
+                                if (subtitleIcon != null) ...[
+                                  WidgetSpan(
+                                    alignment: PlaceholderAlignment.middle,
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                        top: defaultTargetPlatform == TargetPlatform.iOS ? 2.h : 0,
+                                      ),
+                                      child: subtitleIcon,
+                                    ),
+                                  ),
+                                  const TextSpan(text: ' '),
+                                ],
                                 TextSpan(text: subtitle),
                               ],
                             ),

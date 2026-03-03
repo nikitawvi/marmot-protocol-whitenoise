@@ -9,6 +9,17 @@ class AppLocalizationsIt extends AppLocalizations {
   AppLocalizationsIt([String locale = 'it']) : super(locale);
 
   @override
+  String photoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Foto',
+      one: 'Foto',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get appTitle => 'White Noise';
 
   @override

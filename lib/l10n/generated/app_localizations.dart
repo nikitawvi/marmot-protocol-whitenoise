@@ -108,6 +108,12 @@ abstract class AppLocalizations {
     Locale('tr'),
   ];
 
+  /// Label shown in chat list when the last message contains photos
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Photo} other{Photos}}'**
+  String photoCount(int count);
+
   /// The application title displayed on home screen
   ///
   /// In en, this message translates to:

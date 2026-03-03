@@ -1,6 +1,16 @@
 {
   "@@locale": "en",
 
+  "photoCount": "{count, plural, =1{Photo} other{Photos}}",
+  "@photoCount": {
+    "description": "Label shown in chat list when the last message contains photos",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
   "appTitle": "White Noise",
   "@appTitle": {
     "description": "The application title displayed on home screen"

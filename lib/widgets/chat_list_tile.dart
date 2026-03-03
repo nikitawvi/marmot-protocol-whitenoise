@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:whitenoise/l10n/l10n.dart';
@@ -9,6 +10,8 @@ import 'package:whitenoise/routes.dart' show Routes;
 import 'package:whitenoise/services/user_service.dart';
 import 'package:whitenoise/src/rust/api/chat_list.dart' show ChatSummary, setChatPinOrder;
 import 'package:whitenoise/src/rust/api/groups.dart' show GroupType;
+import 'package:whitenoise/src/rust/api/messages.dart' show ChatMessageSummary;
+import 'package:whitenoise/theme.dart';
 import 'package:whitenoise/utils/metadata.dart';
 import 'package:whitenoise/widgets/wn_avatar.dart';
 import 'package:whitenoise/widgets/wn_chat_list_context_menu.dart';
@@ -17,6 +20,26 @@ import 'package:whitenoise/widgets/wn_chat_status.dart';
 import 'package:whitenoise/widgets/wn_icon.dart';
 
 final _logger = Logger('ChatListTile');
+
+({String subtitle, Widget? icon})? _mediaSubtitle(
+  BuildContext context,
+  ChatMessageSummary? lastMessage,
+) {
+  if (lastMessage == null ||
+      lastMessage.content.isNotEmpty ||
+      lastMessage.mediaAttachmentCount <= BigInt.zero) {
+    return null;
+  }
+  return (
+    subtitle: context.l10n.photoCount(lastMessage.mediaAttachmentCount.toInt()),
+    icon: WnIcon(
+      WnIcons.image,
+      key: const Key('media_subtitle_icon'),
+      size: 16.w,
+      color: context.colors.backgroundContentSecondary,
+    ),
+  );
+}
 
 class ChatListTile extends HookConsumerWidget {
   final ChatSummary chatSummary;
@@ -57,6 +80,9 @@ class ChatListTile extends HookConsumerWidget {
     final String? pictureUrl;
     final String subtitle;
     final String? avatarName;
+    Widget? subtitleIcon;
+
+    final media = _mediaSubtitle(context, chatSummary.lastMessage);
 
     if (isPending) {
       final hasMessages = chatSummary.lastMessage != null;
@@ -64,14 +90,22 @@ class ChatListTile extends HookConsumerWidget {
         title = welcomerName ?? chatSummary.name ?? context.l10n.unknownUser;
         pictureUrl = welcomerSnapshot.data?.picture ?? chatSummary.groupImageUrl;
         avatarName = welcomerName ?? chatSummary.name;
-        subtitle = hasMessages
-            ? chatSummary.lastMessage!.content
-            : context.l10n.hasInvitedYouToSecureChat;
+        if (media != null) {
+          subtitle = media.subtitle;
+          subtitleIcon = media.icon;
+        } else if (hasMessages) {
+          subtitle = chatSummary.lastMessage!.content;
+        } else {
+          subtitle = context.l10n.hasInvitedYouToSecureChat;
+        }
       } else {
         title = hasGroupName ? chatSummary.name! : context.l10n.unknownGroup;
         pictureUrl = chatSummary.groupImagePath;
         avatarName = hasGroupName ? chatSummary.name! : null;
-        if (hasMessages) {
+        if (media != null) {
+          subtitle = media.subtitle;
+          subtitleIcon = media.icon;
+        } else if (hasMessages) {
           subtitle = chatSummary.lastMessage!.content;
         } else if (welcomerName != null) {
           subtitle = context.l10n.userInvitedYouToSecureChat(welcomerName);
@@ -88,7 +122,12 @@ class ChatListTile extends HookConsumerWidget {
         pictureUrl = chatSummary.groupImagePath;
       }
       avatarName = hasGroupName ? chatSummary.name! : null;
-      subtitle = chatSummary.lastMessage?.content ?? '';
+      if (media != null) {
+        subtitle = media.subtitle;
+        subtitleIcon = media.icon;
+      } else {
+        subtitle = chatSummary.lastMessage?.content ?? '';
+      }
     }
 
     final timestamp = chatSummary.lastMessage?.createdAt ?? chatSummary.createdAt;
@@ -143,6 +182,7 @@ class ChatListTile extends HookConsumerWidget {
           status: status,
           unreadCount: unreadCount,
           prefixSubtitle: prefixSubtitle,
+          subtitleIcon: subtitleIcon,
         ),
         actions: [
           WnChatListContextMenuAction(
@@ -183,6 +223,7 @@ class ChatListTile extends HookConsumerWidget {
       status: status,
       unreadCount: unreadCount,
       prefixSubtitle: prefixSubtitle,
+      subtitleIcon: subtitleIcon,
     );
   }
 }
