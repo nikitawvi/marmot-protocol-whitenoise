@@ -186,6 +186,14 @@ void main() {
         expect(api.followsCalls.length, 1);
         expect(api.followsCalls[0], 'my_account');
       });
+
+      testWidgets('excludes account pubkey from follows list', (tester) async {
+        await pump(tester, accountPubkey: testPubkeyA);
+        await tester.pump();
+
+        expect(getState().users.length, 1);
+        expect(getState().users[0].pubkey, testPubkeyB);
+      });
     });
 
     group('npub search', () {
@@ -248,6 +256,17 @@ void main() {
           api.errorPubkeys.add(testPubkeyC);
 
           await pump(tester, searchQuery: testNpubC);
+          await tester.pump();
+
+          expect(getState().users, isEmpty);
+          expect(getState().isLoading, isFalse);
+        });
+
+        testWidgets('returns empty list when searching own npub', (tester) async {
+          api.npubToPubkey[testNpubA] = testPubkeyA;
+          api.userByPubkey[testPubkeyA] = _userFactory(testPubkeyA, displayName: 'Me');
+
+          await pump(tester, accountPubkey: testPubkeyA, searchQuery: testNpubA);
           await tester.pump();
 
           expect(getState().users, isEmpty);

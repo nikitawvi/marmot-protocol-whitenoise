@@ -255,8 +255,10 @@ UserSearchState useUserSearch({
     isLoading = isLoadingNameSearch.value && bfsResults.isEmpty && localNameMatches.isEmpty;
   }
 
+  final filteredUsers = users.where((user) => user.pubkey != accountPubkey).toList();
+
   return (
-    users: users,
+    users: filteredUsers,
     isLoading: isLoading,
     isSearching: isNameQuery && isSearchingNames.value,
     hasSearchQuery: hasSearchQuery,

@@ -36,6 +36,7 @@ class StartChatScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final accountPubkey = ref.watch(accountPubkeyProvider);
+    final isSelf = accountPubkey == userPubkey;
 
     final metadataSnapshot = useUserMetadata(context, userPubkey);
     final keyPackageSnapshot = useUserHasKeyPackage(userPubkey);
@@ -68,6 +69,7 @@ class StartChatScreen extends HookConsumerWidget {
     final keyPackageStatus = keyPackageSnapshot.data;
 
     Future<void> startChat() async {
+      if (isSelf) return;
       try {
         final groupId = await dmState.startDm();
         if (context.mounted) {
@@ -82,6 +84,7 @@ class StartChatScreen extends HookConsumerWidget {
     }
 
     Future<void> handleFollowAction() async {
+      if (isSelf) return;
       try {
         await followState.toggleFollow();
       } catch (_) {
@@ -159,7 +162,9 @@ class StartChatScreen extends HookConsumerWidget {
                               showErrorNotice(context.l10n.publicKeyCopyError),
                         ),
                         Gap(8.h),
-                        if (keyPackageStatus == KeyPackageStatus.valid) ...[
+                        if (isSelf)
+                          ...[]
+                        else if (keyPackageStatus == KeyPackageStatus.valid) ...[
                           SizedBox(
                             width: double.infinity,
                             child: WnButton(
