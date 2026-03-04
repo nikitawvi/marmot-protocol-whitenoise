@@ -5,20 +5,33 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:logging/logging.dart';
 import 'package:whitenoise/utils/relay_url_validation.dart';
+import 'package:whitenoise/widgets/wn_icon.dart' show WnIcons;
 
-final _logger = Logger('useAddRelay');
+final _logger = Logger('useRelayInput');
 
-({
+String _validationErrorToKey(RelayValidationError error) {
+  return switch (error) {
+    RelayValidationError.invalidScheme => 'invalidRelayUrlScheme',
+    RelayValidationError.invalidUrl => 'invalidRelayUrl',
+  };
+}
+
+typedef RelayInputResult = ({
   TextEditingController controller,
   bool isValid,
-  RelayValidationError? validationError,
-  void Function() paste,
-})
-useAddRelay() {
+  String? validationError,
+  void Function() handleTrailingAction,
+  WnIcons trailingIcon,
+  String trailingKey,
+});
+
+RelayInputResult useRelayInput() {
   final controller = useTextEditingController(text: 'wss://');
   final isValid = useState(false);
-  final validationError = useState<RelayValidationError?>(null);
+  final validationError = useState<String?>(null);
   final debounceTimer = useRef<Timer?>(null);
+  final hasText = useState(false);
+  final context = useContext();
 
   void runValidation() {
     final url = controller.text.trim();
@@ -36,13 +49,18 @@ useAddRelay() {
       validationError.value = null;
     } else {
       isValid.value = false;
-      validationError.value = error;
+      validationError.value = _validationErrorToKey(error);
     }
+  }
+
+  void updateHasText() {
+    hasText.value = !isRelayUrlEmpty(controller.text);
   }
 
   void onUrlChanged() {
     debounceTimer.value?.cancel();
     isValid.value = false;
+    updateHasText();
     debounceTimer.value = Timer(const Duration(milliseconds: 500), runValidation);
   }
 
@@ -55,8 +73,10 @@ useAddRelay() {
   }, [controller]);
 
   Future<void> paste() async {
+    if (!context.mounted) return;
     try {
       final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      if (!context.mounted) return;
       if (clipboardData?.text != null) {
         final String pastedText = clipboardData!.text!.trim();
 
@@ -74,10 +94,31 @@ useAddRelay() {
     }
   }
 
+  void clear() {
+    controller.text = 'wss://';
+    isValid.value = false;
+    validationError.value = null;
+    hasText.value = false;
+    debounceTimer.value?.cancel();
+  }
+
+  void handleTrailingAction() {
+    if (hasText.value) {
+      clear();
+    } else {
+      paste();
+    }
+  }
+
+  final trailingIcon = hasText.value ? WnIcons.closeSmall : WnIcons.paste;
+  final trailingKey = hasText.value ? 'clear_button' : 'paste_button';
+
   return (
     controller: controller,
     isValid: isValid.value,
     validationError: validationError.value,
-    paste: paste,
+    handleTrailingAction: handleTrailingAction,
+    trailingIcon: trailingIcon,
+    trailingKey: trailingKey,
   );
 }
