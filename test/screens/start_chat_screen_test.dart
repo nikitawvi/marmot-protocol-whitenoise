@@ -201,6 +201,13 @@ void main() {
       expect(find.text('Send message'), findsOneWidget);
     });
 
+    testWidgets('does not show self action buttons for own profile', (tester) async {
+      await pumpStartChatScreen(tester, userPubkey: _testPubkey);
+      expect(find.byKey(const Key('follow_button')), findsNothing);
+      expect(find.byKey(const Key('add_to_group_button')), findsNothing);
+      expect(find.byKey(const Key('start_chat_button')), findsNothing);
+    });
+
     testWidgets('does not show invite button when user has valid key package', (tester) async {
       await pumpStartChatScreen(tester, userPubkey: _otherPubkey);
       expect(find.byKey(const Key('invite_button')), findsNothing);
