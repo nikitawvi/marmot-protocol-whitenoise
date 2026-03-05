@@ -35,6 +35,7 @@ and this project adheres to Calendar Versioning (CalVer).
 - Fix base design size [#433](https://github.com/marmot-protocol/whitenoise/pull/433)
 - Fix messages bubbles and handle manual retry [PR #442](https://github.com/marmot-protocol/whitenoise/pull/442)
 - Fix chat invite avatar navigating to wip screen for group chats and hide search for unaccepted dm chat info  [#452](https://github.com/marmot-protocol/whitenoise/pull/452)
+- Fix self-profile flow: hide current user from search results and block self actions on start chat screen [PR #443](https://github.com/marmot-protocol/whitenoise/pull/443)
 
 ### Security
 
