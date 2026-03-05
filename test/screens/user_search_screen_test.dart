@@ -147,8 +147,8 @@ void main() {
 
       testWidgets('shows follows list using WnUserItem', (tester) async {
         await pumpUserSearchScreen(tester);
-        expect(find.byType(WnUserItem), findsNWidgets(2));
-        expect(find.text('Alice'), findsOneWidget);
+        expect(find.byType(WnUserItem), findsOneWidget);
+        expect(find.text('Alice'), findsNothing);
         expect(find.text('Bob'), findsOneWidget);
       });
 
@@ -162,7 +162,7 @@ void main() {
         final npubWidgets = tester
             .widgetList<WnMiddleEllipsisText>(find.byKey(const Key('user_item_npub')))
             .toList();
-        expect(npubWidgets.any((w) => w.text.startsWith('npub 1a1b')), isTrue);
+        expect(npubWidgets.any((w) => w.text.startsWith('npub 1a1b')), isFalse);
         expect(npubWidgets.any((w) => w.text.startsWith('npub 1b2c')), isTrue);
       });
 
@@ -170,9 +170,8 @@ void main() {
         await pumpUserSearchScreen(tester);
 
         final userItems = tester.widgetList<WnUserItem>(find.byType(WnUserItem)).toList();
-        expect(userItems.length, 2);
-        expect(userItems[0].avatarColor, AvatarColor.violet);
-        expect(userItems[1].avatarColor, AvatarColor.amber);
+        expect(userItems.length, 1);
+        expect(userItems[0].avatarColor, AvatarColor.amber);
       });
     });
 
@@ -270,11 +269,11 @@ void main() {
 
       testWidgets('shows filtered follows for partial npub', (tester) async {
         await pumpUserSearchScreen(tester);
-        await tester.enterText(find.byType(TextField), 'npub1a1b');
+        await tester.enterText(find.byType(TextField), 'npub1b2c');
         await tester.pumpAndSettle();
 
-        expect(find.text('Alice'), findsOneWidget);
-        expect(find.text('Bob'), findsNothing);
+        expect(find.text('Alice'), findsNothing);
+        expect(find.text('Bob'), findsOneWidget);
       });
 
       testWidgets('shows no results when no follows match', (tester) async {
@@ -358,12 +357,12 @@ void main() {
 
     group('user tap navigates to start chat screen', () {
       setUp(() {
-        _api.follows = [_userFactory(testPubkeyA, displayName: 'Alice')];
+        _api.follows = [_userFactory(testPubkeyB, displayName: 'Bob')];
       });
 
       testWidgets('navigates to start chat screen when tapping user', (tester) async {
         await pumpUserSearchScreen(tester);
-        await tester.tap(find.text('Alice'));
+        await tester.tap(find.text('Bob'));
         await tester.pumpAndSettle();
 
         expect(find.text('Start new chat'), findsOneWidget);
@@ -372,7 +371,7 @@ void main() {
 
       testWidgets('shows follow button on start chat screen', (tester) async {
         await pumpUserSearchScreen(tester);
-        await tester.tap(find.text('Alice'));
+        await tester.tap(find.text('Bob'));
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('follow_button')), findsOneWidget);
