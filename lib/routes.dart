@@ -41,7 +41,6 @@ import 'package:whitenoise/screens/start_chat_screen.dart' show StartChatScreen;
 import 'package:whitenoise/screens/switch_profile_screen.dart' show SwitchProfileScreen;
 import 'package:whitenoise/screens/user_search_screen.dart' show UserSearchScreen;
 import 'package:whitenoise/screens/user_selection_screen.dart' show UserSelectionScreen;
-import 'package:whitenoise/screens/wip_screen.dart' show WipScreen;
 import 'package:whitenoise/src/rust/api/metadata.dart' show FlutterMetadata;
 import 'package:whitenoise/src/rust/api/users.dart' show User;
 import 'package:whitenoise/utils/app_flavor.dart' show isStaging;
@@ -78,6 +77,7 @@ abstract final class Routes {
   static const _addToGroup = '/add-to-group/:userPubkey';
   static const _startChat = '/start-chat/:userPubkey';
   static const _chatInfo = '/chat-info/:userPubkey';
+  static const _inviteInfo = '/invite-info/:userPubkey';
   static const _groupInfo = '/group-info/:groupId';
   static const _editGroup = '/edit-group/:groupId';
   static const _groupMember = '/group-member/:groupId/:memberPubkey';
@@ -170,13 +170,6 @@ abstract final class Routes {
           pageBuilder: (context, state) => _navigationTransition(
             state: state,
             child: const PrivacySecurityScreen(),
-          ),
-        ),
-        GoRoute(
-          path: _wip,
-          pageBuilder: (context, state) => _navigationTransition(
-            state: state,
-            child: const WipScreen(),
           ),
         ),
 
@@ -329,6 +322,18 @@ abstract final class Routes {
           pageBuilder: (context, state) => _navigationTransition(
             state: state,
             child: ChatInfoScreen(userPubkey: state.pathParameters['userPubkey']!),
+            opaque: false,
+          ),
+        ),
+        GoRoute(
+          name: 'inviteInfo',
+          path: _inviteInfo,
+          pageBuilder: (context, state) => _navigationTransition(
+            state: state,
+            child: ChatInfoScreen(
+              userPubkey: state.pathParameters['userPubkey']!,
+              showSearch: false,
+            ),
             opaque: false,
           ),
         ),
@@ -574,6 +579,12 @@ abstract final class Routes {
     return GoRouter.of(
       context,
     ).pushNamed<bool>('chatInfo', pathParameters: {'userPubkey': userPubkey});
+  }
+
+  static Future<void> pushToInviteInfo(BuildContext context, String userPubkey) {
+    return GoRouter.of(
+      context,
+    ).pushNamed('inviteInfo', pathParameters: {'userPubkey': userPubkey});
   }
 
   static void pushToAddToGroup(BuildContext context, String userPubkey) {
