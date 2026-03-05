@@ -164,7 +164,7 @@ if [ "$BUILD_IOS" = true ]; then
   ./scripts/build_ios.sh
 
   print_info "Building IPA (production flavor)..."
-  flutter build ipa --flavor production --export-method app-store
+  flutter build ipa --flavor production --export-method app-store --dart-define=APP_FLAVOR=production
 
   IPA_PATH=$(find build/ios -name "*.ipa" -type f | head -n 1)
 
