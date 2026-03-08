@@ -10,9 +10,12 @@ import 'package:whitenoise/providers/app_log_filter_provider.dart';
 import 'package:whitenoise/providers/app_log_provider.dart';
 import 'package:whitenoise/routes.dart';
 import 'package:whitenoise/theme.dart';
+import 'package:whitenoise/widgets/wn_icon.dart';
 import 'package:whitenoise/widgets/wn_search_field.dart';
 import 'package:whitenoise/widgets/wn_slate.dart';
 import 'package:whitenoise/widgets/wn_slate_navigation_header.dart';
+
+const _pauseThreshold = 80.0;
 
 class AppLogsScreen extends HookConsumerWidget {
   const AppLogsScreen({super.key});
@@ -21,12 +24,70 @@ class AppLogsScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final typography = context.typographyScaled;
-    final entries = ref.watch(filteredAppLogProvider);
-    final totalEntries = ref.watch(appLogProvider).length;
+    final liveRawEntries = ref.watch(appLogProvider);
+    final totalEntries = liveRawEntries.length;
     final filter = ref.watch(appLogFilterProvider);
     final patternController = useTextEditingController();
     final patternFocus = useFocusNode();
     final searchController = useTextEditingController(text: filter.searchQuery);
+
+    final paused = useState(false);
+    final frozenRawEntries = useState<List<AppLogEntry>>(const []);
+    final scrollController = useScrollController();
+    final isAnimating = useRef(false);
+    final mountedRef = useRef(true);
+    useEffect(
+      () =>
+          () => mountedRef.value = false,
+      const [],
+    );
+
+    List<AppLogEntry> applyFilter(List<AppLogEntry> source) {
+      if (filter.searchQuery.isEmpty &&
+          filter.includePatterns.isEmpty &&
+          filter.excludePatterns.isEmpty) {
+        return source;
+      }
+      return source.where((e) {
+        final buf = StringBuffer('${e.level.name} ${e.loggerName} ${e.message}');
+        if (e.error != null) buf.write(' ${e.error}');
+        if (e.stackTrace != null) buf.write(' ${e.stackTrace}');
+        final text = buf.toString().toLowerCase();
+        if (filter.excludePatterns.any((p) => text.contains(p.toLowerCase()))) {
+          return false;
+        }
+        if (filter.includePatterns.isNotEmpty &&
+            !filter.includePatterns.any((p) => text.contains(p.toLowerCase()))) {
+          return false;
+        }
+        if (filter.searchQuery.isNotEmpty && !text.contains(filter.searchQuery.toLowerCase())) {
+          return false;
+        }
+        return true;
+      }).toList();
+    }
+
+    final entries = applyFilter(paused.value ? frozenRawEntries.value : liveRawEntries);
+
+    final liveRawEntriesRef = useRef(liveRawEntries);
+    liveRawEntriesRef.value = liveRawEntries;
+
+    useEffect(() {
+      void onScroll() {
+        if (!scrollController.hasClients) return;
+        if (isAnimating.value) return;
+        final offset = scrollController.offset;
+        if (!paused.value && offset > _pauseThreshold) {
+          paused.value = true;
+          frozenRawEntries.value = List.of(liveRawEntriesRef.value);
+        } else if (paused.value && offset <= _pauseThreshold) {
+          paused.value = false;
+        }
+      }
+
+      scrollController.addListener(onScroll);
+      return () => scrollController.removeListener(onScroll);
+    }, [scrollController, paused]);
 
     useEffect(() {
       if (searchController.text != filter.searchQuery) {
@@ -39,6 +100,25 @@ class AppLogsScreen extends HookConsumerWidget {
         filter.searchQuery.isNotEmpty ||
         filter.includePatterns.isNotEmpty ||
         filter.excludePatterns.isNotEmpty;
+
+    void resumeLive() {
+      if (scrollController.hasClients) {
+        isAnimating.value = true;
+        scrollController
+            .animateTo(
+              0,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+            )
+            .then((_) {
+              if (!mountedRef.value) return;
+              isAnimating.value = false;
+              paused.value = false;
+            });
+      } else {
+        paused.value = false;
+      }
+    }
 
     return Scaffold(
       backgroundColor: colors.backgroundPrimary,
@@ -188,7 +268,11 @@ class AppLogsScreen extends HookConsumerWidget {
                                 ),
                               if (totalEntries > 0)
                                 TextButton(
-                                  onPressed: () => ref.read(appLogProvider.notifier).clear(),
+                                  onPressed: () {
+                                    ref.read(appLogProvider.notifier).clear();
+                                    paused.value = false;
+                                    frozenRawEntries.value = const [];
+                                  },
                                   child: Text(context.l10n.appLogsClear),
                                 ),
                             ],
@@ -199,32 +283,44 @@ class AppLogsScreen extends HookConsumerWidget {
                   ),
                 ),
                 Expanded(
-                  child: entries.isEmpty
-                      ? Center(
-                          child: Text(
-                            totalEntries == 0
-                                ? context.l10n.appLogsEmpty
-                                : context.l10n.appLogsFilteredCount(
-                                    entries.length,
-                                    totalEntries,
-                                  ),
-                            style: typography.medium14.copyWith(
-                              color: colors.backgroundContentTertiary,
+                  child: Stack(
+                    children: [
+                      entries.isEmpty
+                          ? Center(
+                              child: Text(
+                                totalEntries == 0
+                                    ? context.l10n.appLogsEmpty
+                                    : context.l10n.appLogsFilteredCount(
+                                        entries.length,
+                                        totalEntries,
+                                      ),
+                                style: typography.medium14.copyWith(
+                                  color: colors.backgroundContentTertiary,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              key: const Key('app_logs_list'),
+                              controller: scrollController,
+                              reverse: true,
+                              padding: EdgeInsets.fromLTRB(14.w, 0, 14.w, 14.h),
+                              itemCount: entries.length,
+                              itemBuilder: (context, index) {
+                                final entry = entries[index];
+                                return _LogEntryTile(
+                                  entry: entry,
+                                  onTap: () => _copyEntry(context, entry),
+                                );
+                              },
                             ),
-                          ),
-                        )
-                      : ListView.builder(
-                          reverse: true,
-                          padding: EdgeInsets.fromLTRB(14.w, 0, 14.w, 14.h),
-                          itemCount: entries.length,
-                          itemBuilder: (context, index) {
-                            final entry = entries[index];
-                            return _LogEntryTile(
-                              entry: entry,
-                              onTap: () => _copyEntry(context, entry),
-                            );
-                          },
+                      if (paused.value)
+                        Positioned(
+                          bottom: 16.h,
+                          right: 16.w,
+                          child: _AppLogsResumeLiveButton(onTap: resumeLive),
                         ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -254,6 +350,55 @@ class AppLogsScreen extends HookConsumerWidget {
     if (entry.error != null) buf.writeln('  error: ${entry.error}');
     if (entry.stackTrace != null) buf.writeln('  stackTrace: ${entry.stackTrace}');
     return buf.toString();
+  }
+}
+
+class _AppLogsResumeLiveButton extends StatelessWidget {
+  const _AppLogsResumeLiveButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final typography = context.typographyScaled;
+
+    return GestureDetector(
+      key: const Key('app_logs_resume_live'),
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: colors.fillPrimary,
+          borderRadius: BorderRadius.circular(999.r),
+          boxShadow: [
+            BoxShadow(
+              color: colors.backgroundContentPrimary.withValues(alpha: 0.15),
+              blurRadius: 8.r,
+              offset: Offset(0.w, 2.h),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            WnIcon(
+              WnIcons.arrowDown,
+              key: const Key('app_logs_resume_live_icon'),
+              size: 14.sp,
+              color: colors.fillContentPrimary,
+            ),
+            Gap(6.w),
+            Text(
+              context.l10n.appLogsLive,
+              style: typography.semiBold12.copyWith(
+                color: colors.fillContentPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
