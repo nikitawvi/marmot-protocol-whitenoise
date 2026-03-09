@@ -23,6 +23,7 @@ and this project adheres to Calendar Versioning (CalVer).
 ### Removed
 
 ### Fixed
+- UI Polish: Login Screen [PR #459](https://github.com/marmot-protocol/whitenoise/pull/459)
 - UI Polish: Home Screen [PR #441](https://github.com/marmot-protocol/whitenoise/pull/441)
 - Fix focus on reply [PR #389](https://github.com/marmot-protocol/whitenoise/pull/389)
 - Fix npubs middle ellipsis by adding snap to words option [PR #388](https://github.com/marmot-protocol/whitenoise/pull/388)
