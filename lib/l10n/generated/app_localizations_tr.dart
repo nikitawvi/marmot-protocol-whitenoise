@@ -278,6 +278,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Kar amacı gütmeyen bir kuruluş olarak White Noise, yalnızca gizliliğiniz ve özgürlüğünüz için var, kar için değil. Desteğiniz bizi bağımsız ve taviz vermeden tutar.';
 
   @override
+  String get donateContributionLetter =>
+      'Bir bağış için katkı onay mektubuna ihtiyacınız varsa, info@ipf.dev adresinden bizimle iletişime geçin';
+
+  @override
   String get lightningAddress => 'Lightning Adresi';
 
   @override
@@ -381,6 +385,34 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get developerSettingsTitle => 'Geliştirici Ayarları';
+
+  @override
+  String get keyPackageManagementTitle => 'Anahtar paketi yönetimi';
+
+  @override
+  String get keyPackageManagementDescription => 'Hesap anahtar paketlerini yayımla, yenile ve sil';
+
+  @override
+  String get relayStateTitle => 'Röle durumu';
+
+  @override
+  String get relayStateDescription => 'Canlı röle kontrol düzlemlerini incele';
+
+  @override
+  String get relayControlStateDumpLabel => 'debug_relay_control_state:';
+
+  @override
+  String get relayControlStateSnapshotDescription =>
+      'Canlı röle keşfi, gelen kutusu ve grup düzlemlerinin anlık görüntüsü.';
+
+  @override
+  String get relayControlStateLoading => 'Yükleniyor...';
+
+  @override
+  String get relayControlStateRefreshButton => 'Dökümü yenile';
+
+  @override
+  String get relayControlStateCopyButton => 'Dökümü kopyala';
 
   @override
   String get publishNewKeyPackage => 'Yeni Anahtar Paketi Yayınla';

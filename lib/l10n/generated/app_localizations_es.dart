@@ -279,6 +279,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Como organización sin fines de lucro, White Noise existe únicamente para tu privacidad y libertad, no para obtener ganancias. Tu apoyo nos mantiene independientes y sin compromisos.';
 
   @override
+  String get donateContributionLetter =>
+      'Si necesita una carta de reconocimiento de contribución para una donación, póngase en contacto con nosotros en info@ipf.dev';
+
+  @override
   String get lightningAddress => 'Dirección Lightning';
 
   @override
@@ -383,6 +387,35 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get developerSettingsTitle => 'Ajustes de Desarrollador';
+
+  @override
+  String get keyPackageManagementTitle => 'Gestion de paquetes de llaves';
+
+  @override
+  String get keyPackageManagementDescription =>
+      'Publicar, actualizar y eliminar paquetes de llaves de la cuenta';
+
+  @override
+  String get relayStateTitle => 'Estado de relays';
+
+  @override
+  String get relayStateDescription => 'Inspeccionar los planos de control de relays activos';
+
+  @override
+  String get relayControlStateDumpLabel => 'debug_relay_control_state:';
+
+  @override
+  String get relayControlStateSnapshotDescription =>
+      'Instantánea de los planos activos de descubrimiento de relés, bandeja de entrada y grupos.';
+
+  @override
+  String get relayControlStateLoading => 'Cargando...';
+
+  @override
+  String get relayControlStateRefreshButton => 'Actualizar volcado';
+
+  @override
+  String get relayControlStateCopyButton => 'Copiar volcado';
 
   @override
   String get publishNewKeyPackage => 'Publicar Nuevo Paquete de Llaves';

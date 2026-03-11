@@ -597,8 +597,14 @@ abstract class AppLocalizations {
   /// Donate screen description
   ///
   /// In en, this message translates to:
-  /// **'As a not-for-profit, White Noise exists solely for your privacy and freedom, not for profit. Your support keeps us independent and uncompromised.'**
+  /// **'As a 501(c)3 non-profit, White Noise exists solely for your privacy and freedom, not for profit. Your support keeps us independent and uncompromised.'**
   String get donateDescription;
+
+  /// Donate screen contribution acknowledgement text
+  ///
+  /// In en, this message translates to:
+  /// **'If you need a contribution acknowledgement letter for a donation, get in touch with us at info@ipf.dev'**
+  String get donateContributionLetter;
 
   /// Lightning address label
   ///
@@ -791,6 +797,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Developer Settings'**
   String get developerSettingsTitle;
+
+  /// Key package management screen title and row label
+  ///
+  /// In en, this message translates to:
+  /// **'Key Package Management'**
+  String get keyPackageManagementTitle;
+
+  /// Developer settings row description for key package management
+  ///
+  /// In en, this message translates to:
+  /// **'Publish, refresh, and delete account key packages'**
+  String get keyPackageManagementDescription;
+
+  /// Developer settings row label and relay state screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Relay State'**
+  String get relayStateTitle;
+
+  /// Developer settings row description for relay state
+  ///
+  /// In en, this message translates to:
+  /// **'Inspect the live relay control planes'**
+  String get relayStateDescription;
+
+  /// Technical label shown above the relay control state dump
+  ///
+  /// In en, this message translates to:
+  /// **'debug_relay_control_state:'**
+  String get relayControlStateDumpLabel;
+
+  /// Description shown above the relay control state dump
+  ///
+  /// In en, this message translates to:
+  /// **'Snapshot of the live relay discovery, inbox, and group planes.'**
+  String get relayControlStateSnapshotDescription;
+
+  /// Button label shown while the relay control state dump is loading
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get relayControlStateLoading;
+
+  /// Button label to refresh the relay control state dump
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh Dump'**
+  String get relayControlStateRefreshButton;
+
+  /// Button label to copy the relay control state dump
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Dump'**
+  String get relayControlStateCopyButton;
 
   /// Button to publish new key package
   ///

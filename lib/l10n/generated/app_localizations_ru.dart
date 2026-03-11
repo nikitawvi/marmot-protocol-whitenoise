@@ -279,6 +279,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Как некоммерческая организация, White Noise существует исключительно для вашей конфиденциальности и свободы, а не для прибыли. Ваша поддержка сохраняет нашу независимость и бескомпромиссность.';
 
   @override
+  String get donateContributionLetter =>
+      'Если вам нужно письмо-подтверждение о пожертвовании, свяжитесь с нами по адресу info@ipf.dev';
+
+  @override
   String get lightningAddress => 'Адрес Lightning';
 
   @override
@@ -381,7 +385,36 @@ class AppLocalizationsRu extends AppLocalizations {
   String get searchByNameOrNpub => 'Имя или npub1...';
 
   @override
-  String get developerSettingsTitle => 'Настройки Разработчика';
+  String get developerSettingsTitle => 'Настройки разработчика';
+
+  @override
+  String get keyPackageManagementTitle => 'Управление пакетами ключей';
+
+  @override
+  String get keyPackageManagementDescription =>
+      'Публиковать, обновлять и удалять пакеты ключей аккаунта';
+
+  @override
+  String get relayStateTitle => 'Состояние реле';
+
+  @override
+  String get relayStateDescription => 'Просмотреть активные плоскости управления реле';
+
+  @override
+  String get relayControlStateDumpLabel => 'debug_relay_control_state:';
+
+  @override
+  String get relayControlStateSnapshotDescription =>
+      'Снимок активных плоскостей обнаружения реле, входящих и групп.';
+
+  @override
+  String get relayControlStateLoading => 'Загрузка...';
+
+  @override
+  String get relayControlStateRefreshButton => 'Обновить дамп';
+
+  @override
+  String get relayControlStateCopyButton => 'Скопировать дамп';
 
   @override
   String get publishNewKeyPackage => 'Опубликовать Новый Пакет Ключей';

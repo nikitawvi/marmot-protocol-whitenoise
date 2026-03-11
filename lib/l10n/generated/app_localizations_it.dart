@@ -279,6 +279,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Come organizzazione senza scopo di lucro, White Noise esiste unicamente per la tua privacy e libertà, non per profitto. Il tuo supporto ci mantiene indipendenti e senza compromessi.';
 
   @override
+  String get donateContributionLetter =>
+      'Se hai bisogno di una lettera di attestazione per una donazione, contattaci a info@ipf.dev';
+
+  @override
   String get lightningAddress => 'Indirizzo Lightning';
 
   @override
@@ -382,6 +386,35 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get developerSettingsTitle => 'Impostazioni Sviluppatore';
+
+  @override
+  String get keyPackageManagementTitle => 'Gestione pacchetti chiavi';
+
+  @override
+  String get keyPackageManagementDescription =>
+      'Pubblica, aggiorna ed elimina i pacchetti chiavi dell\'account';
+
+  @override
+  String get relayStateTitle => 'Stato relay';
+
+  @override
+  String get relayStateDescription => 'Ispeziona i piani di controllo relay attivi';
+
+  @override
+  String get relayControlStateDumpLabel => 'debug_relay_control_state:';
+
+  @override
+  String get relayControlStateSnapshotDescription =>
+      'Istantanea dei piani attivi di rilevamento relay, inbox e gruppi.';
+
+  @override
+  String get relayControlStateLoading => 'Caricamento...';
+
+  @override
+  String get relayControlStateRefreshButton => 'Aggiorna dump';
+
+  @override
+  String get relayControlStateCopyButton => 'Copia dump';
 
   @override
   String get publishNewKeyPackage => 'Pubblica Nuovo Pacchetto Chiavi';
