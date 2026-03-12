@@ -46,40 +46,36 @@ class KeyPackageManagementScreen extends HookConsumerWidget {
       };
     }
 
-    Future<void> handleAction(Future<KeyPackageResult> Function() action) async {
-      try {
-        final result = await action();
-        if (!context.mounted) {
-          return;
-        }
-        if (result.success) {
-          showNotice(getSuccessMessage(result.action));
-        } else if (result.error != null) {
-          showNotice(result.error!, isError: true);
-        }
-      } catch (e) {
-        if (context.mounted) {
-          showNotice(context.l10n.error(e.toString()), isError: true);
-        }
-      }
+    String getErrorMessage(KeyPackageAction action) {
+      return switch (action) {
+        KeyPackageAction.fetch => context.l10n.keyPackageFetchFailed,
+        KeyPackageAction.publish => context.l10n.keyPackagePublishFailed,
+        KeyPackageAction.delete => context.l10n.keyPackageDeleteFailed,
+        KeyPackageAction.deleteAll => context.l10n.keyPackageDeleteAllFailed,
+      };
     }
 
-    Future<void> handleDelete(String id) async {
-      final result = await delete(id);
-      if (!context.mounted) {
-        return;
-      }
+    Future<void> handleAction(Future<KeyPackageResult> Function() action) async {
+      final result = await action();
+      if (!context.mounted) return;
       if (result.success) {
         showNotice(getSuccessMessage(result.action));
-      } else if (result.error != null) {
-        showNotice(result.error!, isError: true);
+      } else {
+        showNotice(getErrorMessage(result.action), isError: true);
       }
     }
 
+    Future<void> handleDelete(String id) => handleAction(() => delete(id));
+
     useEffect(() {
-      fetch();
+      fetch().then((result) {
+        if (!context.mounted) return;
+        if (!result.success) {
+          showNotice(getErrorMessage(result.action), isError: true);
+        }
+      });
       return null;
-    }, const []);
+    }, [pubkey]);
 
     return Scaffold(
       backgroundColor: colors.backgroundPrimary,
@@ -108,19 +104,11 @@ class KeyPackageManagementScreen extends HookConsumerWidget {
                   SizedBox(height: 16.h),
                   _KeyPackageActionButtons(
                     isLoading: state.isLoading,
+                    activeAction: state.activeAction,
                     onPublish: () => handleAction(publish),
                     onFetch: () => handleAction(fetch),
                     onDeleteAll: () => handleAction(deleteAll),
                   ),
-                  if (state.error != null) ...[
-                    SizedBox(height: 12.h),
-                    Text(
-                      state.error!,
-                      style: typography.medium14.copyWith(
-                        color: colors.fillDestructive,
-                      ),
-                    ),
-                  ],
                   SizedBox(height: 16.h),
                   Text(
                     context.l10n.keyPackagesCount(state.packages.length),
@@ -130,18 +118,12 @@ class KeyPackageManagementScreen extends HookConsumerWidget {
                   ),
                   SizedBox(height: 12.h),
                   Expanded(
-                    child: state.isLoading && state.packages.isEmpty
-                        ? Center(
-                            child: CircularProgressIndicator(
-                              strokeCap: StrokeCap.round,
-                              color: colors.backgroundContentPrimary,
-                            ),
-                          )
-                        : _KeyPackageList(
-                            packages: state.packages,
-                            onDelete: handleDelete,
-                            disabled: state.isLoading,
-                          ),
+                    child: _KeyPackageList(
+                      packages: state.packages,
+                      onDelete: handleDelete,
+                      disabled: state.isLoading,
+                      deletingId: state.deletingId,
+                    ),
                   ),
                 ],
               ),
@@ -156,12 +138,14 @@ class KeyPackageManagementScreen extends HookConsumerWidget {
 class _KeyPackageActionButtons extends StatelessWidget {
   const _KeyPackageActionButtons({
     required this.isLoading,
+    required this.activeAction,
     required this.onPublish,
     required this.onFetch,
     required this.onDeleteAll,
   });
 
   final bool isLoading;
+  final KeyPackageAction? activeAction;
   final VoidCallback onPublish;
   final VoidCallback onFetch;
   final VoidCallback onDeleteAll;
@@ -173,21 +157,26 @@ class _KeyPackageActionButtons extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         WnButton(
-          text: context.l10n.publishNewKeyPackage,
-          onPressed: onPublish,
-          disabled: isLoading,
-          size: WnButtonSize.medium,
-        ),
-        WnButton(
           text: context.l10n.refreshKeyPackages,
           onPressed: onFetch,
           disabled: isLoading,
+          loading: activeAction == KeyPackageAction.fetch,
+          type: WnButtonType.outline,
+          size: WnButtonSize.medium,
+        ),
+        WnButton(
+          text: context.l10n.publishNewKeyPackage,
+          onPressed: onPublish,
+          disabled: isLoading,
+          loading: activeAction == KeyPackageAction.publish,
           size: WnButtonSize.medium,
         ),
         WnButton(
           text: context.l10n.deleteAllKeyPackages,
           onPressed: onDeleteAll,
           disabled: isLoading,
+          loading: activeAction == KeyPackageAction.deleteAll,
+          type: WnButtonType.destructive,
           size: WnButtonSize.medium,
         ),
       ],
@@ -200,11 +189,13 @@ class _KeyPackageList extends HookWidget {
     required this.packages,
     required this.onDelete,
     required this.disabled,
+    required this.deletingId,
   });
 
   final List<FlutterEvent> packages;
   final void Function(String id) onDelete;
   final bool disabled;
+  final String? deletingId;
 
   @override
   Widget build(BuildContext context) {
@@ -246,6 +237,7 @@ class _KeyPackageList extends HookWidget {
               separatorBuilder: (_, _) => SizedBox(height: 8.h),
               itemBuilder: (context, index) {
                 final package = packages[index];
+                final isDeleting = deletingId == package.id;
                 return WnKeyPackageCard(
                   key: Key('key_package_card_${package.id}'),
                   title: context.l10n.packageNumber(index + 1),
@@ -253,7 +245,8 @@ class _KeyPackageList extends HookWidget {
                   createdAt: package.createdAt.toIso8601String(),
                   onDelete: () => onDelete(package.id),
                   deleteLabel: context.l10n.delete,
-                  disabled: disabled,
+                  disabled: disabled || isDeleting,
+                  loading: isDeleting,
                   deleteButtonKey: Key('delete_key_package_${package.id}'),
                 );
               },
