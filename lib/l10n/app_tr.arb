@@ -360,5 +360,21 @@
   "fatalErrorCopyError": "Hatayı kopyala",
   "fatalErrorErrorCopied": "Hata panoya kopyalandı",
   "fatalErrorTitle": "Eyvah!",
-  "fatalErrorDescription": "Uygulama yüklenirken bir sorunla karşılaştık. Sorun sende değil, biziz ve özür dileriz.\n\nDüzeltmemize yardımcı ol. Aşağıya dokunarak bu hatayı ekibimize gönder."
+  "fatalErrorDescription": "Uygulama yüklenirken bir sorunla karşılaştık. Sorun sende değil, biziz ve özür dileriz.\n\nDüzeltmemize yardımcı ol. Aşağıya dokunarak bu hatayı ekibimize gönder.",
+  "reportBug": "Hata bildir",
+  "reportBugDescription": "Karşılaştığınız sorunu açıklayarak White Noise'u geliştirmemize yardımcı olun.",
+  "reportBugWhatWentWrong": "Ne yanlış gitti?",
+  "reportBugWhatWentWrongPlaceholder": "Yaşadığınız sorunu açıklayın...",
+  "reportBugStepsToReproduce": "Yeniden oluşturma adımları",
+  "reportBugStepsToReproducePlaceholder": "1. Şuraya git...\n2. Şuna dokun...\n3. Hatayı gör",
+  "reportBugFrequency": "Bu ne sıklıkla oluyor?",
+  "reportBugFrequencyOnce": "Bir kez",
+  "reportBugFrequencyAlways": "Her zaman",
+  "reportBugFrequencySometimes": "Bazen",
+  "reportBugIncludeNpub": "npub'unuzu ekleyin",
+  "reportBugIncludeNpubDescription": "Gerektiğinde sizinle iletişime geçmemizi sağlar.",
+  "reportBugSend": "Raporu gönder",
+  "reportBugSuccess": "Hata raporu gönderildi. Teşekkürler!",
+  "reportBugError": "Rapor gönderilemedi. Lütfen tekrar deneyin.",
+  "reportBugWhatWentWrongRequired": "Lütfen neyin yanlış gittiğini açıklayın."
 }
