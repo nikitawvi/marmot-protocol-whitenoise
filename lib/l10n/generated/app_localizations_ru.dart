@@ -1256,19 +1256,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось загрузить состояние управления реле. Пожалуйста, попробуйте снова.';
 
   @override
-  String get fatalErrorCopyError => 'Копировать ошибку';
-
-  @override
-  String get fatalErrorErrorCopied => 'Ошибка скопирована в буфер обмена';
-
-  @override
-  String get fatalErrorTitle => 'О нет!';
-
-  @override
-  String get fatalErrorDescription =>
-      'У нас возникла проблема при загрузке приложения. Это не вы, а мы, и нам очень жаль.\n\nПомогите нам исправить это. Нажмите ниже, чтобы отправить эту ошибку нашей команде.';
-
-  @override
   String get reportBug => 'Сообщить о баге';
 
   @override
@@ -1320,5 +1307,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reportBugWhatWentWrongRequired => 'Пожалуйста, опишите, что пошло не так.';
 
   @override
-  String get failedToStartHelpChat => 'Не удалось запустить чат поддержки';
+  String get failedToStartSupportChat => 'Не удалось запустить чат с поддержкой';
+
+  @override
+  String get fatalErrorTitle => 'О нет!';
+
+  @override
+  String get fatalErrorDescription =>
+      'У нас возникла проблема при загрузке приложения. Это не вы, а мы, и нам очень жаль.\n\nПомогите нам исправить это. Нажмите ниже, чтобы отправить эту ошибку нашей команде.';
+
+  @override
+  String get fatalErrorCopyError => 'Копировать ошибку';
+
+  @override
+  String get fatalErrorErrorCopied => 'Ошибка скопирована в буфер обмена';
 }
