@@ -7,12 +7,10 @@ import 'package:whitenoise/hooks/use_chat_messages.dart' show ChatMessageQuoteDa
 import 'package:whitenoise/l10n/l10n.dart';
 import 'package:whitenoise/src/rust/api/messages.dart' show ChatMessage;
 import 'package:whitenoise/theme.dart';
-import 'package:whitenoise/utils/bubble_grouping.dart' show shouldShowAvatar;
 import 'package:whitenoise/widgets/chat_message_bubble.dart';
 import 'package:whitenoise/widgets/wn_button.dart';
 import 'package:whitenoise/widgets/wn_emoji_picker.dart';
 import 'package:whitenoise/widgets/wn_icon.dart';
-import 'package:whitenoise/widgets/wn_slate.dart';
 import 'package:whitenoise/widgets/wn_system_notice.dart';
 
 class MessageActionsScreen extends HookWidget {
@@ -27,6 +25,8 @@ class MessageActionsScreen extends HookWidget {
     this.senderName,
     this.senderPictureUrl,
     this.isGroupChat = false,
+    this.showAvatar = false,
+    this.showTail = true,
     this.getChatMessageQuote,
   });
 
@@ -39,6 +39,8 @@ class MessageActionsScreen extends HookWidget {
   final String? senderName;
   final String? senderPictureUrl;
   final bool isGroupChat;
+  final bool showAvatar;
+  final bool showTail;
   final ChatMessageQuoteData? Function(String? replyId)? getChatMessageQuote;
 
   static Future<void> show(
@@ -52,6 +54,8 @@ class MessageActionsScreen extends HookWidget {
     String? senderName,
     String? senderPictureUrl,
     bool isGroupChat = false,
+    bool showAvatar = false,
+    bool showTail = true,
     ChatMessageQuoteData? Function(String? replyId)? getChatMessageQuote,
   }) {
     final colors = context.colors;
@@ -72,6 +76,8 @@ class MessageActionsScreen extends HookWidget {
             senderName: senderName,
             senderPictureUrl: senderPictureUrl,
             isGroupChat: isGroupChat,
+            showAvatar: showAvatar,
+            showTail: showTail,
             getChatMessageQuote: getChatMessageQuote,
           );
         },
@@ -174,6 +180,8 @@ class MessageActionsScreen extends HookWidget {
                     senderName: senderName,
                     senderPictureUrl: senderPictureUrl,
                     isGroupChat: isGroupChat,
+                    showAvatar: showAvatar,
+                    showTail: showTail,
                     getChatMessageQuote: getChatMessageQuote,
                   ),
                 ],
@@ -205,6 +213,8 @@ class MessageActionsModal extends StatelessWidget {
     this.senderName,
     this.senderPictureUrl,
     this.isGroupChat = false,
+    this.showAvatar = false,
+    this.showTail = true,
     this.getChatMessageQuote,
   });
 
@@ -219,6 +229,8 @@ class MessageActionsModal extends StatelessWidget {
   final String? senderName;
   final String? senderPictureUrl;
   final bool isGroupChat;
+  final bool showAvatar;
+  final bool showTail;
   final ChatMessageQuoteData? Function(String? replyId)? getChatMessageQuote;
 
   static const List<String> reactions = [
@@ -236,91 +248,128 @@ class MessageActionsModal extends StatelessWidget {
     final colors = context.colors;
     final replyPreview = message.isReply ? getChatMessageQuote?.call(message.replyToId) : null;
 
-    return WnSlate(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(14.w, 14.h, 14.w, 14.h),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ChatMessageBubble(
-              message: message,
-              isOwnMessage: isOwnMessage,
-              currentUserPubkey: currentUserPubkey,
-              showAvatar: shouldShowAvatar(
-                current: message,
-                next: null,
-                isOwnMessage: isOwnMessage,
-                isGroupChat: isGroupChat,
-              ),
-              senderName: senderName,
-              senderPictureUrl: senderPictureUrl,
-              isGroupChat: isGroupChat,
-              replyPreview: replyPreview,
-            ),
-            SizedBox(height: 16.h),
-            Row(
-              children: [
-                ...reactions.map(
-                  (emoji) => Expanded(
-                    child: _ReactionButton(
-                      key: Key('reaction_$emoji'),
-                      colors: colors,
-                      emoji: emoji,
-                      isSelected: selectedEmojis.contains(emoji),
-                      onTap: () => onReaction(emoji),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    key: const Key('emoji_picker_button'),
-                    onTap: onEmojiPicker,
-                    child: Center(
-                      child: WnIcon(
-                        WnIcons.addEmoji,
-                        color: colors.backgroundContentPrimary,
-                        size: 20.sp,
+    final maxHeight = MediaQuery.of(context).size.height * 0.8;
+    final slateDecoration = BoxDecoration(
+      color: colors.backgroundSecondary,
+      borderRadius: BorderRadius.circular(16.r),
+      border: Border.all(color: colors.borderTertiary),
+      boxShadow: [
+        BoxShadow(
+          color: colors.shadow.withValues(alpha: 0.1),
+          offset: const Offset(0, 1),
+          blurRadius: 2.r,
+          spreadRadius: (-1).r,
+        ),
+        BoxShadow(
+          color: colors.shadow.withValues(alpha: 0.1),
+          offset: const Offset(0, 1),
+          blurRadius: 3.r,
+        ),
+      ],
+    );
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 8.w),
+          decoration: slateDecoration,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16.r),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.35,
+                      ),
+                      child: SingleChildScrollView(
+                        child: ChatMessageBubble(
+                          message: message,
+                          isOwnMessage: isOwnMessage,
+                          currentUserPubkey: currentUserPubkey,
+                          showAvatar: showAvatar,
+                          showTail: showTail,
+                          senderName: senderName,
+                          senderPictureUrl: senderPictureUrl,
+                          isGroupChat: isGroupChat,
+                          replyPreview: replyPreview,
+                        ),
                       ),
                     ),
-                  ),
+                    SizedBox(height: 16.h),
+                    Row(
+                      children: [
+                        ...reactions.map(
+                          (emoji) => Expanded(
+                            child: _ReactionButton(
+                              key: Key('reaction_$emoji'),
+                              colors: colors,
+                              emoji: emoji,
+                              isSelected: selectedEmojis.contains(emoji),
+                              onTap: () => onReaction(emoji),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            key: const Key('emoji_picker_button'),
+                            onTap: onEmojiPicker,
+                            child: Center(
+                              child: WnIcon(
+                                WnIcons.addEmoji,
+                                color: colors.backgroundContentPrimary,
+                                size: 20.sp,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    if (onReply != null) ...[
+                      WnButton(
+                        key: const Key('reply_button'),
+                        text: context.l10n.reply,
+                        type: WnButtonType.outline,
+                        size: WnButtonSize.medium,
+                        trailingIcon: WnIcons.reply,
+                        onPressed: onReply,
+                      ),
+                      Gap(8.h),
+                    ],
+                    WnButton(
+                      key: const Key('copy_button'),
+                      text: context.l10n.copyMessage,
+                      type: WnButtonType.outline,
+                      size: WnButtonSize.medium,
+                      trailingIcon: WnIcons.copy,
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: message.content));
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    if (onDelete != null) ...[
+                      Gap(8.h),
+                      WnButton(
+                        key: const Key('delete_button'),
+                        text: context.l10n.delete,
+                        type: WnButtonType.destructive,
+                        size: WnButtonSize.medium,
+                        trailingIcon: WnIcons.trashCan,
+                        onPressed: onDelete,
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            if (onReply != null)
-              WnButton(
-                key: const Key('reply_button'),
-                text: context.l10n.reply,
-                type: WnButtonType.outline,
-                size: WnButtonSize.medium,
-                trailingIcon: WnIcons.reply,
-                onPressed: onReply,
               ),
-            Gap(8.h),
-            WnButton(
-              key: const Key('copy_button'),
-              text: context.l10n.copyMessage,
-              type: WnButtonType.outline,
-              size: WnButtonSize.medium,
-              trailingIcon: WnIcons.copy,
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: message.content));
-                Navigator.of(context).pop();
-              },
             ),
-            if (onDelete != null) ...[
-              Gap(8.h),
-              WnButton(
-                key: const Key('delete_button'),
-                text: context.l10n.delete,
-                type: WnButtonType.destructive,
-                size: WnButtonSize.medium,
-                trailingIcon: WnIcons.trashCan,
-                onPressed: onDelete,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

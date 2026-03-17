@@ -167,7 +167,11 @@ class ChatScreen extends HookConsumerWidget {
       return messageService.toggleReaction(message: message, emoji: emoji);
     }
 
-    Future<void> showMessageMenu(ChatMessage message) async {
+    Future<void> showMessageMenu(
+      ChatMessage message, {
+      required bool showAvatar,
+      required bool showTail,
+    }) async {
       FocusScope.of(context).unfocus();
       final isGroupChat = chatProfile.data?.isDm != true;
       final authorMetadata = getAuthorMetadata(message.pubkey);
@@ -179,6 +183,8 @@ class ChatScreen extends HookConsumerWidget {
         context,
         message: message,
         pubkey: pubkey,
+        showAvatar: showAvatar,
+        showTail: showTail,
         onDelete: () => messageService.deleteTextMessage(
           messageId: message.id,
           messagePubkey: message.pubkey,
@@ -277,7 +283,11 @@ class ChatScreen extends HookConsumerWidget {
                 message: message,
                 isOwnMessage: isOwnMessage,
                 currentUserPubkey: pubkey,
-                onLongPress: () => showMessageMenu(message),
+                onLongPress: () => showMessageMenu(
+                  message,
+                  showAvatar: showAvatar,
+                  showTail: showTail,
+                ),
                 onReaction: (emoji) => toggleReaction(message, emoji),
                 onHorizontalDragEnd: () => input.setReplyingTo(message),
                 onRetry: isOwnMessage && message.deliveryStatus is DeliveryStatus_Failed
