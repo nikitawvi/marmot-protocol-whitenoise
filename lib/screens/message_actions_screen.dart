@@ -1,3 +1,5 @@
+import 'dart:math' show max, min;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -11,6 +13,7 @@ import 'package:whitenoise/widgets/chat_message_bubble.dart';
 import 'package:whitenoise/widgets/wn_button.dart';
 import 'package:whitenoise/widgets/wn_emoji_picker.dart';
 import 'package:whitenoise/widgets/wn_icon.dart';
+import 'package:whitenoise/widgets/wn_slate.dart';
 import 'package:whitenoise/widgets/wn_system_notice.dart';
 
 class MessageActionsScreen extends HookWidget {
@@ -154,38 +157,71 @@ class MessageActionsScreen extends HookWidget {
               onDismiss: dismissNotice,
             ),
           Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.h),
-              child: Column(
-                mainAxisAlignment: showEmojiPicker.value
-                    ? MainAxisAlignment.end
-                    : MainAxisAlignment.center,
-                children: [
-                  MessageActionsModal(
-                    message: message,
-                    isOwnMessage: isOwnMessage,
-                    currentUserPubkey: pubkey,
-                    onDelete: (isOwnMessage && onDelete != null) ? handleDelete : null,
-                    onReaction: handleReaction,
-                    onEmojiPicker: () => showEmojiPicker.value = !showEmojiPicker.value,
-                    selectedEmojis: selectedEmojis,
-                    onReply: onReply != null
-                        ? () {
-                            Navigator.of(context).pop();
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              onReply!(message);
-                            });
-                          }
-                        : null,
-                    senderName: senderName,
-                    senderPictureUrl: senderPictureUrl,
-                    isGroupChat: isGroupChat,
-                    showAvatar: showAvatar,
-                    showTail: showTail,
-                    getChatMessageQuote: getChatMessageQuote,
-                  ),
-                ],
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              behavior: HitTestBehavior.opaque,
+            ),
+          ),
+          if (showEmojiPicker.value)
+            Flexible(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.h),
+                child: MessageActionsModal(
+                  message: message,
+                  isOwnMessage: isOwnMessage,
+                  currentUserPubkey: pubkey,
+                  onDelete: (isOwnMessage && onDelete != null) ? handleDelete : null,
+                  onReaction: handleReaction,
+                  onEmojiPicker: () => showEmojiPicker.value = !showEmojiPicker.value,
+                  selectedEmojis: selectedEmojis,
+                  onReply: onReply != null
+                      ? () {
+                          Navigator.of(context).pop();
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            onReply!(message);
+                          });
+                        }
+                      : null,
+                  senderName: senderName,
+                  senderPictureUrl: senderPictureUrl,
+                  isGroupChat: isGroupChat,
+                  showAvatar: showAvatar,
+                  showTail: showTail,
+                  getChatMessageQuote: getChatMessageQuote,
+                ),
               ),
+            )
+          else
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              child: MessageActionsModal(
+                message: message,
+                isOwnMessage: isOwnMessage,
+                currentUserPubkey: pubkey,
+                onDelete: (isOwnMessage && onDelete != null) ? handleDelete : null,
+                onReaction: handleReaction,
+                onEmojiPicker: () => showEmojiPicker.value = !showEmojiPicker.value,
+                selectedEmojis: selectedEmojis,
+                onReply: onReply != null
+                    ? () {
+                        Navigator.of(context).pop();
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          onReply!(message);
+                        });
+                      }
+                    : null,
+                senderName: senderName,
+                senderPictureUrl: senderPictureUrl,
+                isGroupChat: isGroupChat,
+                showAvatar: showAvatar,
+                showTail: showTail,
+                getChatMessageQuote: getChatMessageQuote,
+              ),
+            ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              behavior: HitTestBehavior.opaque,
             ),
           ),
           if (showEmojiPicker.value)
@@ -248,48 +284,34 @@ class MessageActionsModal extends StatelessWidget {
     final colors = context.colors;
     final replyPreview = message.isReply ? getChatMessageQuote?.call(message.replyToId) : null;
 
-    final maxHeight = MediaQuery.of(context).size.height * 0.8;
-    final slateDecoration = BoxDecoration(
-      color: colors.backgroundSecondary,
-      borderRadius: BorderRadius.circular(16.r),
-      border: Border.all(color: colors.borderTertiary),
-      boxShadow: [
-        BoxShadow(
-          color: colors.shadow.withValues(alpha: 0.1),
-          offset: const Offset(0, 1),
-          blurRadius: 2.r,
-          spreadRadius: (-1).r,
-        ),
-        BoxShadow(
-          color: colors.shadow.withValues(alpha: 0.1),
-          offset: const Offset(0, 1),
-          blurRadius: 3.r,
-        ),
-      ],
-    );
+    const slateMaxHeightOffset = 192.0;
+    final viewportHeight = MediaQuery.of(context).size.height;
+    final slateMaxHeight = viewportHeight - slateMaxHeightOffset;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: maxHeight),
-      child: Material(
-        type: MaterialType.transparency,
-        child: Container(
-          margin: EdgeInsets.symmetric(horizontal: 8.w),
-          decoration: slateDecoration,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16.r),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final hasBoundedHeight = constraints.maxHeight.isFinite;
+        final effectiveMaxHeight =
+            hasBoundedHeight ? min(slateMaxHeight, constraints.maxHeight) : slateMaxHeight;
+        final effectiveMessageMaxHeight = max(
+          0.0,
+          effectiveMaxHeight - 28.h - 16.h - 48.h - 16.h - 160.h,
+        );
+        final slate = WnSlate(
+            tag: 'message-actions-slate',
+            shrinkWrapContent: true,
+            animateContent: false,
+            padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 14.h),
             child: SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 14.h),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height * 0.35,
-                      ),
-                      child: SingleChildScrollView(
-                        child: ChatMessageBubble(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: effectiveMessageMaxHeight),
+                  child: ClipRect(
+                    child: ChatMessageBubble(
                           message: message,
                           isOwnMessage: isOwnMessage,
                           currentUserPubkey: currentUserPubkey,
@@ -298,13 +320,13 @@ class MessageActionsModal extends StatelessWidget {
                           senderName: senderName,
                           senderPictureUrl: senderPictureUrl,
                           isGroupChat: isGroupChat,
-                          replyPreview: replyPreview,
-                        ),
-                      ),
+                      replyPreview: replyPreview,
                     ),
-                    SizedBox(height: 16.h),
-                    Row(
-                      children: [
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Row(
+                  children: [
                         ...reactions.map(
                           (emoji) => Expanded(
                             child: _ReactionButton(
@@ -329,49 +351,56 @@ class MessageActionsModal extends StatelessWidget {
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                    SizedBox(height: 16.h),
-                    if (onReply != null) ...[
-                      WnButton(
-                        key: const Key('reply_button'),
-                        text: context.l10n.reply,
-                        type: WnButtonType.outline,
-                        size: WnButtonSize.medium,
-                        trailingIcon: WnIcons.reply,
-                        onPressed: onReply,
-                      ),
-                      Gap(8.h),
-                    ],
-                    WnButton(
-                      key: const Key('copy_button'),
-                      text: context.l10n.copyMessage,
-                      type: WnButtonType.outline,
-                      size: WnButtonSize.medium,
-                      trailingIcon: WnIcons.copy,
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: message.content));
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                    if (onDelete != null) ...[
-                      Gap(8.h),
-                      WnButton(
-                        key: const Key('delete_button'),
-                        text: context.l10n.delete,
-                        type: WnButtonType.destructive,
-                        size: WnButtonSize.medium,
-                        trailingIcon: WnIcons.trashCan,
-                        onPressed: onDelete,
-                      ),
-                    ],
                   ],
                 ),
-              ),
+                SizedBox(height: 16.h),
+                if (onReply != null) ...[
+                  WnButton(
+                    key: const Key('reply_button'),
+                    text: context.l10n.reply,
+                    type: WnButtonType.outline,
+                    size: WnButtonSize.medium,
+                    trailingIcon: WnIcons.reply,
+                    onPressed: onReply,
+                  ),
+                  Gap(8.h),
+                ],
+                WnButton(
+                  key: const Key('copy_button'),
+                  text: context.l10n.copyMessage,
+                  type: WnButtonType.outline,
+                  size: WnButtonSize.medium,
+                  trailingIcon: WnIcons.copy,
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: message.content));
+                    Navigator.of(context).pop();
+                  },
+                ),
+                if (onDelete != null) ...[
+                  Gap(8.h),
+                  WnButton(
+                    key: const Key('delete_button'),
+                    text: context.l10n.delete,
+                    type: WnButtonType.destructive,
+                    size: WnButtonSize.medium,
+                    trailingIcon: WnIcons.trashCan,
+                    onPressed: onDelete,
+                  ),
+                ],
+              ],
             ),
-          ),
-        ),
-      ),
+            ),
+        );
+        return hasBoundedHeight
+            ? ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: 0,
+                  maxHeight: effectiveMaxHeight,
+                ),
+                child: slate,
+              )
+            : slate;
+      },
     );
   }
 }
