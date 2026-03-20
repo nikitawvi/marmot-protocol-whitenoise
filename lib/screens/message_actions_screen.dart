@@ -1,4 +1,4 @@
-import 'dart:math' show max, min;
+import 'dart:math' show max;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +9,7 @@ import 'package:whitenoise/hooks/use_chat_messages.dart' show ChatMessageQuoteDa
 import 'package:whitenoise/l10n/l10n.dart';
 import 'package:whitenoise/src/rust/api/messages.dart' show ChatMessage;
 import 'package:whitenoise/theme.dart';
+import 'package:whitenoise/utils/bubble_grouping.dart' show shouldShowAvatar;
 import 'package:whitenoise/widgets/chat_message_bubble.dart';
 import 'package:whitenoise/widgets/wn_button.dart';
 import 'package:whitenoise/widgets/wn_emoji_picker.dart';
@@ -28,8 +29,6 @@ class MessageActionsScreen extends HookWidget {
     this.senderName,
     this.senderPictureUrl,
     this.isGroupChat = false,
-    this.showAvatar = false,
-    this.showTail = true,
     this.getChatMessageQuote,
   });
 
@@ -42,8 +41,6 @@ class MessageActionsScreen extends HookWidget {
   final String? senderName;
   final String? senderPictureUrl;
   final bool isGroupChat;
-  final bool showAvatar;
-  final bool showTail;
   final ChatMessageQuoteData? Function(String? replyId)? getChatMessageQuote;
 
   static Future<void> show(
@@ -57,8 +54,6 @@ class MessageActionsScreen extends HookWidget {
     String? senderName,
     String? senderPictureUrl,
     bool isGroupChat = false,
-    bool showAvatar = false,
-    bool showTail = true,
     ChatMessageQuoteData? Function(String? replyId)? getChatMessageQuote,
   }) {
     final colors = context.colors;
@@ -79,8 +74,6 @@ class MessageActionsScreen extends HookWidget {
             senderName: senderName,
             senderPictureUrl: senderPictureUrl,
             isGroupChat: isGroupChat,
-            showAvatar: showAvatar,
-            showTail: showTail,
             getChatMessageQuote: getChatMessageQuote,
           );
         },
@@ -157,71 +150,48 @@ class MessageActionsScreen extends HookWidget {
               onDismiss: dismissNotice,
             ),
           Expanded(
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              behavior: HitTestBehavior.opaque,
-            ),
-          ),
-          if (showEmojiPicker.value)
-            Flexible(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-                child: MessageActionsModal(
-                  message: message,
-                  isOwnMessage: isOwnMessage,
-                  currentUserPubkey: pubkey,
-                  onDelete: (isOwnMessage && onDelete != null) ? handleDelete : null,
-                  onReaction: handleReaction,
-                  onEmojiPicker: () => showEmojiPicker.value = !showEmojiPicker.value,
-                  selectedEmojis: selectedEmojis,
-                  onReply: onReply != null
-                      ? () {
-                          Navigator.of(context).pop();
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            onReply!(message);
-                          });
-                        }
-                      : null,
-                  senderName: senderName,
-                  senderPictureUrl: senderPictureUrl,
-                  isGroupChat: isGroupChat,
-                  showAvatar: showAvatar,
-                  showTail: showTail,
-                  getChatMessageQuote: getChatMessageQuote,
-                ),
-              ),
-            )
-          else
-            Padding(
+            child: Padding(
               padding: EdgeInsets.symmetric(vertical: 16.h),
-              child: MessageActionsModal(
-                message: message,
-                isOwnMessage: isOwnMessage,
-                currentUserPubkey: pubkey,
-                onDelete: (isOwnMessage && onDelete != null) ? handleDelete : null,
-                onReaction: handleReaction,
-                onEmojiPicker: () => showEmojiPicker.value = !showEmojiPicker.value,
-                selectedEmojis: selectedEmojis,
-                onReply: onReply != null
-                    ? () {
-                        Navigator.of(context).pop();
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          onReply!(message);
-                        });
-                      }
-                    : null,
-                senderName: senderName,
-                senderPictureUrl: senderPictureUrl,
-                isGroupChat: isGroupChat,
-                showAvatar: showAvatar,
-                showTail: showTail,
-                getChatMessageQuote: getChatMessageQuote,
+              child: Builder(
+                builder: (context) {
+                  final viewportHeight = MediaQuery.sizeOf(context).height;
+                  const slateMaxHeightOffset = 192.0;
+                  final slateMaxHeight = max(
+                    200.0,
+                    viewportHeight - slateMaxHeightOffset - 28.h - 16.h - 48.h - 16.h - 32.h,
+                  );
+                  final modal = ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: slateMaxHeight),
+                    child: UnconstrainedBox(
+                      constrainedAxis: Axis.horizontal,
+                      child: MessageActionsModal(
+                        message: message,
+                        isOwnMessage: isOwnMessage,
+                        currentUserPubkey: pubkey,
+                        onDelete: (isOwnMessage && onDelete != null) ? handleDelete : null,
+                        onReaction: handleReaction,
+                        onEmojiPicker: () => showEmojiPicker.value = !showEmojiPicker.value,
+                        selectedEmojis: selectedEmojis,
+                        onReply: onReply != null
+                            ? () {
+                                Navigator.of(context).pop();
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  onReply!(message);
+                                });
+                              }
+                            : null,
+                        senderName: senderName,
+                        senderPictureUrl: senderPictureUrl,
+                        isGroupChat: isGroupChat,
+                        getChatMessageQuote: getChatMessageQuote,
+                      ),
+                    ),
+                  );
+                  return showEmojiPicker.value
+                      ? Align(alignment: Alignment.bottomCenter, child: modal)
+                      : Center(child: modal);
+                },
               ),
-            ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              behavior: HitTestBehavior.opaque,
             ),
           ),
           if (showEmojiPicker.value)
@@ -249,8 +219,6 @@ class MessageActionsModal extends StatelessWidget {
     this.senderName,
     this.senderPictureUrl,
     this.isGroupChat = false,
-    this.showAvatar = false,
-    this.showTail = true,
     this.getChatMessageQuote,
   });
 
@@ -265,8 +233,6 @@ class MessageActionsModal extends StatelessWidget {
   final String? senderName;
   final String? senderPictureUrl;
   final bool isGroupChat;
-  final bool showAvatar;
-  final bool showTail;
   final ChatMessageQuoteData? Function(String? replyId)? getChatMessageQuote;
 
   static const List<String> reactions = [
@@ -279,128 +245,111 @@ class MessageActionsModal extends StatelessWidget {
     '🦥',
   ];
 
+  static const _slateMaxHeightOffset = 192.0;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final replyPreview = message.isReply ? getChatMessageQuote?.call(message.replyToId) : null;
+    final viewportHeight = MediaQuery.sizeOf(context).height;
+    final messageMaxHeight = max(
+      0.0,
+      viewportHeight - _slateMaxHeightOffset - 28.h - 16.h - 48.h - 16.h - 160.h,
+    );
 
-    const slateMaxHeightOffset = 192.0;
-    final viewportHeight = MediaQuery.of(context).size.height;
-    final slateMaxHeight = viewportHeight - slateMaxHeightOffset;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final hasBoundedHeight = constraints.maxHeight.isFinite;
-        final effectiveMaxHeight =
-            hasBoundedHeight ? min(slateMaxHeight, constraints.maxHeight) : slateMaxHeight;
-        final effectiveMessageMaxHeight = max(
-          0.0,
-          effectiveMaxHeight - 28.h - 16.h - 48.h - 16.h - 160.h,
-        );
-        final slate = WnSlate(
-            tag: 'message-actions-slate',
-            shrinkWrapContent: true,
-            animateContent: false,
-            padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 14.h),
-            child: SingleChildScrollView(
-              physics: const NeverScrollableScrollPhysics(),
-              child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    return WnSlate(
+      shrinkWrapContent: true,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(14.w, 14.h, 14.w, 14.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: messageMaxHeight),
+              child: ClipRect(
+                child: ChatMessageBubble(
+                  message: message,
+                  isOwnMessage: isOwnMessage,
+                  currentUserPubkey: currentUserPubkey,
+                  showAvatar: shouldShowAvatar(
+                    current: message,
+                    next: null,
+                    isOwnMessage: isOwnMessage,
+                    isGroupChat: isGroupChat,
+                  ),
+                  senderName: senderName,
+                  senderPictureUrl: senderPictureUrl,
+                  isGroupChat: isGroupChat,
+                  replyPreview: replyPreview,
+                ),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Row(
               children: [
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: effectiveMessageMaxHeight),
-                  child: ClipRect(
-                    child: ChatMessageBubble(
-                          message: message,
-                          isOwnMessage: isOwnMessage,
-                          currentUserPubkey: currentUserPubkey,
-                          showAvatar: showAvatar,
-                          showTail: showTail,
-                          senderName: senderName,
-                          senderPictureUrl: senderPictureUrl,
-                          isGroupChat: isGroupChat,
-                      replyPreview: replyPreview,
+                ...reactions.map(
+                  (emoji) => Expanded(
+                    child: _ReactionButton(
+                      key: Key('reaction_$emoji'),
+                      colors: colors,
+                      emoji: emoji,
+                      isSelected: selectedEmojis.contains(emoji),
+                      onTap: () => onReaction(emoji),
                     ),
                   ),
                 ),
-                SizedBox(height: 16.h),
-                Row(
-                  children: [
-                        ...reactions.map(
-                          (emoji) => Expanded(
-                            child: _ReactionButton(
-                              key: Key('reaction_$emoji'),
-                              colors: colors,
-                              emoji: emoji,
-                              isSelected: selectedEmojis.contains(emoji),
-                              onTap: () => onReaction(emoji),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            key: const Key('emoji_picker_button'),
-                            onTap: onEmojiPicker,
-                            child: Center(
-                              child: WnIcon(
-                                WnIcons.addEmoji,
-                                color: colors.backgroundContentPrimary,
-                                size: 20.sp,
-                              ),
-                            ),
-                          ),
-                        ),
-                  ],
-                ),
-                SizedBox(height: 16.h),
-                if (onReply != null) ...[
-                  WnButton(
-                    key: const Key('reply_button'),
-                    text: context.l10n.reply,
-                    type: WnButtonType.outline,
-                    size: WnButtonSize.medium,
-                    trailingIcon: WnIcons.reply,
-                    onPressed: onReply,
+                Expanded(
+                  child: GestureDetector(
+                    key: const Key('emoji_picker_button'),
+                    onTap: onEmojiPicker,
+                    child: Center(
+                      child: WnIcon(
+                        WnIcons.addEmoji,
+                        color: colors.backgroundContentPrimary,
+                        size: 20.sp,
+                      ),
+                    ),
                   ),
-                  Gap(8.h),
-                ],
-                WnButton(
-                  key: const Key('copy_button'),
-                  text: context.l10n.copyMessage,
-                  type: WnButtonType.outline,
-                  size: WnButtonSize.medium,
-                  trailingIcon: WnIcons.copy,
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: message.content));
-                    Navigator.of(context).pop();
-                  },
                 ),
-                if (onDelete != null) ...[
-                  Gap(8.h),
-                  WnButton(
-                    key: const Key('delete_button'),
-                    text: context.l10n.delete,
-                    type: WnButtonType.destructive,
-                    size: WnButtonSize.medium,
-                    trailingIcon: WnIcons.trashCan,
-                    onPressed: onDelete,
-                  ),
-                ],
               ],
             ),
+            SizedBox(height: 16.h),
+            if (onReply != null)
+              WnButton(
+                key: const Key('reply_button'),
+                text: context.l10n.reply,
+                type: WnButtonType.outline,
+                size: WnButtonSize.medium,
+                trailingIcon: WnIcons.reply,
+                onPressed: onReply,
+              ),
+            Gap(8.h),
+            WnButton(
+              key: const Key('copy_button'),
+              text: context.l10n.copyMessage,
+              type: WnButtonType.outline,
+              size: WnButtonSize.medium,
+              trailingIcon: WnIcons.copy,
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: message.content));
+                Navigator.of(context).pop();
+              },
             ),
-        );
-        return hasBoundedHeight
-            ? ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: 0,
-                  maxHeight: effectiveMaxHeight,
-                ),
-                child: slate,
-              )
-            : slate;
-      },
+            if (onDelete != null) ...[
+              Gap(8.h),
+              WnButton(
+                key: const Key('delete_button'),
+                text: context.l10n.delete,
+                type: WnButtonType.destructive,
+                size: WnButtonSize.medium,
+                trailingIcon: WnIcons.trashCan,
+                onPressed: onDelete,
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
