@@ -30,6 +30,7 @@ class _TextWithTimestamp extends StatelessWidget {
     required this.showDeliveryStatus,
     this.deliveryStatus,
     this.onStatusTap,
+    this.maxLines,
   });
 
   final String content;
@@ -40,15 +41,19 @@ class _TextWithTimestamp extends StatelessWidget {
   final bool showDeliveryStatus;
   final ChatStatusType? deliveryStatus;
   final VoidCallback? onStatusTap;
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
-    final reservedWidth = _timestampReservedWidth(
+    var reservedWidth = _timestampReservedWidth(
       timestamp,
       tsStyle,
       isOutgoing,
       showDeliveryStatus,
     );
+    if (maxLines != null) {
+      reservedWidth += 48.w;
+    }
 
     Widget statusRow = Row(
       mainAxisSize: MainAxisSize.min,
@@ -79,6 +84,8 @@ class _TextWithTimestamp extends StatelessWidget {
               WidgetSpan(child: SizedBox(width: reservedWidth)),
             ],
           ),
+          maxLines: maxLines,
+          overflow: maxLines != null ? TextOverflow.ellipsis : null,
         ),
         Positioned(bottom: 0, right: 0, child: statusRow),
       ],
@@ -215,6 +222,7 @@ class _BubbleContent extends StatelessWidget {
     required this.showDeliveryStatus,
     this.deliveryStatus,
     this.onStatusTap,
+    this.maxTextLines,
   });
 
   final Color bubbleColor;
@@ -239,6 +247,7 @@ class _BubbleContent extends StatelessWidget {
   final bool showDeliveryStatus;
   final ChatStatusType? deliveryStatus;
   final VoidCallback? onStatusTap;
+  final int? maxTextLines;
 
   Widget _buildTimestampRow() {
     Widget row = Row(
@@ -304,9 +313,15 @@ class _BubbleContent extends StatelessWidget {
               showDeliveryStatus: showDeliveryStatus,
               deliveryStatus: deliveryStatus,
               onStatusTap: onStatusTap,
+              maxLines: maxTextLines,
             )
           else if (hasText)
-            Text(content!, style: textStyle)
+            Text(
+              content!,
+              style: textStyle,
+              maxLines: maxTextLines,
+              overflow: maxTextLines != null ? TextOverflow.ellipsis : null,
+            )
           else if (hasTimestamp) ...[
             SizedBox(height: 2.h),
             _buildTimestampRow(),
@@ -514,6 +529,7 @@ class WnMessageBubble extends StatelessWidget {
   final BubbleLeadingVariant leadingVariant;
   final ChatStatusType? deliveryStatus;
   final VoidCallback? onStatusTap;
+  final int? maxTextLines;
 
   const WnMessageBubble({
     super.key,
@@ -536,6 +552,7 @@ class WnMessageBubble extends StatelessWidget {
     this.leadingVariant = BubbleLeadingVariant.none,
     this.deliveryStatus,
     this.onStatusTap,
+    this.maxTextLines,
   });
 
   bool get _isOutgoing => direction == MessageDirection.outgoing;
@@ -614,6 +631,7 @@ class WnMessageBubble extends StatelessWidget {
       showDeliveryStatus: !isDeleted,
       deliveryStatus: actualDeliveryStatus,
       onStatusTap: isDeleted ? null : onStatusTap,
+      maxTextLines: maxTextLines,
     );
 
     return LayoutBuilder(

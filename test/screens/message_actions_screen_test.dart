@@ -10,6 +10,7 @@ import 'package:whitenoise/screens/message_actions_screen.dart';
 import 'package:whitenoise/src/rust/api/messages.dart';
 import 'package:whitenoise/src/rust/api/metadata.dart';
 import 'package:whitenoise/widgets/wn_message_bubble.dart';
+import 'package:whitenoise/widgets/wn_slate.dart';
 import 'package:whitenoise/widgets/wn_system_notice.dart';
 
 import '../test_helpers.dart';
@@ -96,6 +97,32 @@ void main() {
       );
 
       expect(find.byKey(const Key('slate_close_button')), findsNothing);
+    });
+
+    testWidgets('uses dynamic height and truncates without scroll', (tester) async {
+      Future<double> pumpAndMeasureHeight(String content) async {
+        await mountWidget(
+          MessageActionsModal(
+            message: _createTestMessage(content: content),
+            isOwnMessage: false,
+            onReaction: (_) {},
+            onEmojiPicker: () {},
+            currentUserPubkey: testPubkeyA,
+            slateMaxHeight: 560,
+          ),
+          tester,
+        );
+        await tester.pumpAndSettle();
+        final slateBox = tester.renderObject<RenderBox>(find.byType(WnSlate));
+        return slateBox.size.height;
+      }
+
+      final shortHeight = await pumpAndMeasureHeight('Hi');
+      final longHeight = await pumpAndMeasureHeight(List.filled(600, 'long').join(' '));
+
+      expect(longHeight, greaterThan(shortHeight));
+      expect(longHeight, lessThanOrEqualTo(560));
+      expect(find.byType(SingleChildScrollView), findsNothing);
     });
 
     group('Reply preview', () {

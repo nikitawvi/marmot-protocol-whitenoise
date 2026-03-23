@@ -26,6 +26,7 @@ class ChatMessageBubble extends StatelessWidget {
   final bool showAvatar;
   final bool showTail;
   final bool isGroupChat;
+  final int? maxTextLines;
 
   const ChatMessageBubble({
     super.key,
@@ -43,6 +44,7 @@ class ChatMessageBubble extends StatelessWidget {
     this.showAvatar = false,
     this.showTail = true,
     this.isGroupChat = false,
+    this.maxTextLines,
   });
 
   ChatStatusType? get _deliveryStatusType {
@@ -135,6 +137,7 @@ class ChatMessageBubble extends StatelessWidget {
       ),
       deliveryStatus: isOwnMessage ? _deliveryStatusType : null,
       onStatusTap: _deliveryStatusType == ChatStatusType.failed ? onRetry : null,
+      maxTextLines: maxTextLines,
     );
   }
 }
