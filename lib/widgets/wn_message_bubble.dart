@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -11,6 +13,8 @@ export 'package:whitenoise/src/rust/api/messages.dart' show EmojiReaction;
 const _timestampMinPadding = 16.0;
 const _chatStatusW = 18.0;
 const _chatStatusGap = 4.0;
+const _truncatedStatusTopGap = 2.0;
+const _truncatedStatusBottomReserve = 6.0;
 
 enum MessageDirection { incoming, outgoing }
 
@@ -30,6 +34,7 @@ class _TextWithTimestamp extends StatelessWidget {
     required this.showDeliveryStatus,
     this.deliveryStatus,
     this.onStatusTap,
+    this.maxLines,
   });
 
   final String content;
@@ -40,6 +45,7 @@ class _TextWithTimestamp extends StatelessWidget {
   final bool showDeliveryStatus;
   final ChatStatusType? deliveryStatus;
   final VoidCallback? onStatusTap;
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +57,7 @@ class _TextWithTimestamp extends StatelessWidget {
     );
 
     Widget statusRow = Row(
+      key: const Key('message_status_row'),
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(timestamp, style: tsStyle),
@@ -67,6 +74,122 @@ class _TextWithTimestamp extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onStatusTap,
         child: statusRow,
+      );
+    }
+
+    if (maxLines != null) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final textMaxWidth = (constraints.maxWidth - reservedWidth).clamp(0.0, double.infinity);
+          final painter = TextPainter(
+            text: TextSpan(text: content, style: textStyle),
+            textDirection: Directionality.of(context),
+            maxLines: maxLines,
+            ellipsis: '\u2026',
+            textScaler: MediaQuery.textScalerOf(context),
+          );
+          try {
+            painter.layout(maxWidth: textMaxWidth);
+            final isTruncated = painter.didExceedMaxLines;
+            if (isTruncated) {
+              final textLinePainter = TextPainter(
+                text: TextSpan(text: ' ', style: textStyle),
+                textDirection: Directionality.of(context),
+                textScaler: MediaQuery.textScalerOf(context),
+              );
+              final statusLinePainter = TextPainter(
+                text: TextSpan(text: timestamp, style: tsStyle),
+                textDirection: Directionality.of(context),
+                textScaler: MediaQuery.textScalerOf(context),
+              );
+              final (:lineHeight, :statusHeight, :effectiveMaxLines) = (() {
+                try {
+                  textLinePainter.layout();
+                  statusLinePainter.layout();
+                  final lineHeight = math.max(textLinePainter.preferredLineHeight, 1.0);
+                  final statusHeight = math.max(
+                    statusLinePainter.preferredLineHeight,
+                    (showDeliveryStatus && isOutgoing) ? _chatStatusW.h : 0.0,
+                  );
+                  final availableTextHeight = constraints.maxHeight.isFinite
+                      ? math.max(
+                          0.0,
+                          constraints.maxHeight -
+                              statusHeight -
+                              _truncatedStatusTopGap.h -
+                              _truncatedStatusBottomReserve.h,
+                        )
+                      : double.infinity;
+                  final linesByHeight = availableTextHeight.isFinite
+                      ? (availableTextHeight / lineHeight).floor()
+                      : maxLines!;
+                  final effectiveMaxLines = math.max(1, math.min(maxLines!, linesByHeight) - 1);
+                  return (
+                    lineHeight: lineHeight,
+                    statusHeight: statusHeight,
+                    effectiveMaxLines: effectiveMaxLines,
+                  );
+                } finally {
+                  textLinePainter.dispose();
+                  statusLinePainter.dispose();
+                }
+              })();
+              if (constraints.maxHeight.isFinite) {
+                return SizedBox(
+                  height: constraints.maxHeight,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          content,
+                          style: textStyle,
+                          maxLines: effectiveMaxLines,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(height: _truncatedStatusTopGap.h),
+                      Align(alignment: Alignment.centerRight, child: statusRow),
+                    ],
+                  ),
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    content,
+                    style: textStyle,
+                    maxLines: effectiveMaxLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: _truncatedStatusTopGap.h),
+                  Align(alignment: Alignment.centerRight, child: statusRow),
+                ],
+              );
+            }
+            final isSingleLine = painter.computeLineMetrics().length <= 1;
+            return Stack(
+              alignment: isOutgoing && isSingleLine ? Alignment.topRight : Alignment.topLeft,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: content, style: textStyle),
+                      WidgetSpan(child: SizedBox(width: reservedWidth)),
+                    ],
+                  ),
+                  maxLines: maxLines,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Positioned(bottom: 0, right: 0, child: statusRow),
+              ],
+            );
+          } finally {
+            painter.dispose();
+          }
+        },
       );
     }
 
@@ -215,6 +338,7 @@ class _BubbleContent extends StatelessWidget {
     required this.showDeliveryStatus,
     this.deliveryStatus,
     this.onStatusTap,
+    this.contentMaxLines,
   });
 
   final Color bubbleColor;
@@ -239,9 +363,11 @@ class _BubbleContent extends StatelessWidget {
   final bool showDeliveryStatus;
   final ChatStatusType? deliveryStatus;
   final VoidCallback? onStatusTap;
+  final int? contentMaxLines;
 
   Widget _buildTimestampRow() {
     Widget row = Row(
+      key: const Key('message_status_row'),
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Text(timestamp!, style: tsStyle),
@@ -266,13 +392,15 @@ class _BubbleContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
 
+    final padding = EdgeInsets.only(
+      left: 10.w,
+      right: 10.w,
+      top: 10.h,
+      bottom: 12.h,
+    );
+
     return Container(
-      padding: EdgeInsets.only(
-        left: 10.w,
-        right: 10.w,
-        top: 10.h,
-        bottom: 12.h,
-      ),
+      padding: padding,
       decoration: BoxDecoration(color: bubbleColor, borderRadius: borderRadius),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -304,9 +432,15 @@ class _BubbleContent extends StatelessWidget {
               showDeliveryStatus: showDeliveryStatus,
               deliveryStatus: deliveryStatus,
               onStatusTap: onStatusTap,
+              maxLines: contentMaxLines,
             )
           else if (hasText)
-            Text(content!, style: textStyle)
+            Text(
+              content!,
+              style: textStyle,
+              maxLines: contentMaxLines,
+              overflow: contentMaxLines != null ? TextOverflow.ellipsis : TextOverflow.clip,
+            )
           else if (hasTimestamp) ...[
             SizedBox(height: 2.h),
             _buildTimestampRow(),
@@ -514,6 +648,9 @@ class WnMessageBubble extends StatelessWidget {
   final BubbleLeadingVariant leadingVariant;
   final ChatStatusType? deliveryStatus;
   final VoidCallback? onStatusTap;
+  final int? contentMaxLines;
+  final double bubbleWidthFactor;
+  final bool forceTightHeight;
 
   const WnMessageBubble({
     super.key,
@@ -536,12 +673,15 @@ class WnMessageBubble extends StatelessWidget {
     this.leadingVariant = BubbleLeadingVariant.none,
     this.deliveryStatus,
     this.onStatusTap,
+    this.contentMaxLines,
+    this.bubbleWidthFactor = 0.8,
+    this.forceTightHeight = false,
   });
 
   bool get _isOutgoing => direction == MessageDirection.outgoing;
 
-  static Widget _wrapBubbleInner({required bool hasMedia, required Widget child}) {
-    if (hasMedia) return child;
+  static Widget _wrapBubbleInner({required bool useIntrinsicWidth, required Widget child}) {
+    if (!useIntrinsicWidth) return child;
     return IntrinsicWidth(child: child);
   }
 
@@ -614,17 +754,21 @@ class WnMessageBubble extends StatelessWidget {
       showDeliveryStatus: !isDeleted,
       deliveryStatus: actualDeliveryStatus,
       onStatusTap: isDeleted ? null : onStatusTap,
+      contentMaxLines: contentMaxLines,
     );
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final baseMaxBubbleWidth = (constraints.maxWidth - avatarColW - leadingIndent) * 0.8;
+        final bottomMargin = showTail ? 12.h : 4.h;
+
+        final baseMaxBubbleWidth =
+            (constraints.maxWidth - avatarColW - leadingIndent) * bubbleWidthFactor;
         final maxBubbleWidth = _isOutgoing && !showTail
             ? baseMaxBubbleWidth - tailOverhang
             : baseMaxBubbleWidth;
-
         final bubble = Align(
           alignment: _isOutgoing ? Alignment.centerRight : Alignment.centerLeft,
+          heightFactor: (forceTightHeight || contentMaxLines != null) ? 1 : null,
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxBubbleWidth),
             child: isDeleted
@@ -645,7 +789,7 @@ class WnMessageBubble extends StatelessWidget {
                       ),
                     ),
                     child: _wrapBubbleInner(
-                      hasMedia: actualMediaContent != null,
+                      useIntrinsicWidth: actualMediaContent == null && contentMaxLines == null,
                       child: bubbleContent,
                     ),
                   )
@@ -656,7 +800,7 @@ class WnMessageBubble extends StatelessWidget {
                       right: _isOutgoing && showTail ? tailOverhang : 0,
                     ),
                     child: _wrapBubbleInner(
-                      hasMedia: mediaContent != null,
+                      useIntrinsicWidth: mediaContent == null && contentMaxLines == null,
                       child: _BubbleInner(
                         onHorizontalDragEnd: onHorizontalDragEnd,
                         onLongPress: onLongPress,
@@ -672,8 +816,6 @@ class WnMessageBubble extends StatelessWidget {
                   ),
           ),
         );
-
-        final bottomMargin = showTail ? 12.h : 4.h;
 
         if (!hasAvatar) {
           final trailingIndent = _isOutgoing && !showTail ? tailOverhang : 0.0;

@@ -566,6 +566,73 @@ void main() {
 
         expect(find.textContaining('12:29', findRichText: true), findsNothing);
       });
+
+      testWidgets('renders non-truncated maxLines path without overflow', (tester) async {
+        await mountWidget(
+          const SizedBox(
+            width: 260,
+            child: WnMessageBubble(
+              direction: MessageDirection.outgoing,
+              isDeleted: false,
+              content: 'Short content',
+              timestamp: '12:00',
+              contentMaxLines: 3,
+            ),
+          ),
+          tester,
+        );
+
+        expect(find.text('Short content'), findsOneWidget);
+        expect(find.byKey(const Key('message_status_row')), findsOneWidget);
+      });
+
+      testWidgets('renders truncated maxLines path with finite height constraints', (tester) async {
+        final veryLongText = List.filled(300, 'long-token').join(' ');
+        await mountWidget(
+          SizedBox(
+            width: 280,
+            height: 220,
+            child: WnMessageBubble(
+              direction: MessageDirection.outgoing,
+              isDeleted: false,
+              content: veryLongText,
+              timestamp: '12:00',
+              contentMaxLines: 6,
+              forceTightHeight: true,
+            ),
+          ),
+          tester,
+        );
+
+        final textWidgets = tester.widgetList<Text>(find.byType(Text));
+        final hasEllipsisText = textWidgets.any(
+          (t) => t.maxLines != null && t.overflow == TextOverflow.ellipsis,
+        );
+        expect(hasEllipsisText, isTrue);
+        expect(find.byKey(const Key('message_status_row')), findsOneWidget);
+      });
+
+      testWidgets('uses finite-height truncated layout without rendering errors', (tester) async {
+        final veryLongText = List.filled(800, 'long-token').join(' ');
+        await mountWidget(
+          SizedBox(
+            width: 180,
+            height: 110,
+            child: WnMessageBubble(
+              direction: MessageDirection.outgoing,
+              isDeleted: false,
+              content: veryLongText,
+              timestamp: '12:00',
+              contentMaxLines: 2,
+              forceTightHeight: true,
+            ),
+          ),
+          tester,
+        );
+
+        expect(find.byKey(const Key('message_status_row')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
     });
 
     group('chat status', () {
@@ -1341,6 +1408,27 @@ void main() {
           tester,
         );
         expect(find.byKey(const Key('deleted_bubble_border')), findsNothing);
+      });
+
+      testWidgets('deleted bubble shape supports inner/outer paths and scale', (tester) async {
+        await mountWidget(
+          const WnMessageBubble(
+            direction: MessageDirection.incoming,
+            isDeleted: true,
+            deletedLabel: 'Deleted',
+            showTail: true,
+          ),
+          tester,
+        );
+
+        final container = tester.widget<Container>(find.byKey(const Key('deleted_bubble_border')));
+        final decoration = container.decoration! as ShapeDecoration;
+        final shape = decoration.shape;
+        const rect = Rect.fromLTWH(0, 0, 120, 60);
+
+        expect(shape.getInnerPath(rect).getBounds().isEmpty, isFalse);
+        expect(shape.getOuterPath(rect).getBounds().isEmpty, isFalse);
+        expect(shape.scale(0.5), isA<ShapeBorder>());
       });
     });
 

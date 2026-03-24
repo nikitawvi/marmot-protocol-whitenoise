@@ -410,6 +410,36 @@ void main() {
         expect(find.byType(WnSystemNotice), findsOneWidget);
         expect(find.text('Failed to start chat. Please try again.'), findsOneWidget);
       });
+
+      testWidgets('does not navigate when widget unmounted before DM creation completes', (
+        tester,
+      ) async {
+        _api.createGroupCompleter = Completer<Group>();
+        await pumpStartChatScreen(tester, userPubkey: _otherPubkey);
+
+        await tester.tap(find.byKey(const Key('start_chat_button')));
+        await tester.pump();
+
+        await tester.tap(find.byKey(const Key('slate_back_button')));
+        await tester.pumpAndSettle();
+        expect(find.text('Start new chat'), findsNothing);
+
+        _api.createGroupCompleter!.complete(
+          Group(
+            mlsGroupId: testGroupId,
+            nostrGroupId: testNostrGroupId,
+            name: '',
+            description: '',
+            adminPubkeys: const [],
+            epoch: BigInt.zero,
+            state: GroupState.active,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+      });
     });
 
     group('back button', () {

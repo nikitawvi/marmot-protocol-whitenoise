@@ -356,6 +356,18 @@ void main() {
       expect(effect.type, ScrollEdgeEffectType.slate);
     });
 
+    testWidgets('handles scroll notifications while list is scrolled', (tester) async {
+      mockApi.keyPackages = _manyKeyPackages(20);
+
+      await pumpScreen(tester);
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(ListView).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('no error notice during initial loading', (tester) async {
       mockApi.fetchCompleter = Completer<List<FlutterEvent>>();
 

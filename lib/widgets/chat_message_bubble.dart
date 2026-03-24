@@ -26,6 +26,9 @@ class ChatMessageBubble extends StatelessWidget {
   final bool showAvatar;
   final bool showTail;
   final bool isGroupChat;
+  final int? contentMaxLines;
+  final double bubbleWidthFactor;
+  final bool forceTightHeight;
 
   const ChatMessageBubble({
     super.key,
@@ -43,6 +46,9 @@ class ChatMessageBubble extends StatelessWidget {
     this.showAvatar = false,
     this.showTail = true,
     this.isGroupChat = false,
+    this.contentMaxLines,
+    this.bubbleWidthFactor = 0.8,
+    this.forceTightHeight = false,
   });
 
   ChatStatusType? get _deliveryStatusType {
@@ -135,6 +141,9 @@ class ChatMessageBubble extends StatelessWidget {
       ),
       deliveryStatus: isOwnMessage ? _deliveryStatusType : null,
       onStatusTap: _deliveryStatusType == ChatStatusType.failed ? onRetry : null,
+      contentMaxLines: contentMaxLines,
+      bubbleWidthFactor: bubbleWidthFactor,
+      forceTightHeight: forceTightHeight,
     );
   }
 }

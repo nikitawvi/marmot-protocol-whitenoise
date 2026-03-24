@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -14,6 +16,72 @@ import 'package:whitenoise/widgets/wn_emoji_picker.dart';
 import 'package:whitenoise/widgets/wn_icon.dart';
 import 'package:whitenoise/widgets/wn_slate.dart';
 import 'package:whitenoise/widgets/wn_system_notice.dart';
+
+const _modalViewportVerticalInset = 96.0;
+const _modalPreviewTopPadding = 10.0;
+const _modalPreviewBottomPadding = 12.0;
+const _modalSenderRowHeight = 20.0;
+const _modalSenderGap = 8.0;
+const _modalReplyRowHeight = 56.0;
+const _modalMediaHeight = 96.0;
+const _modalReactionsHeight = 36.0;
+const _modalSectionSpacing = 16.0;
+const _modalButtonSpacing = 8.0;
+const _modalContentHorizontalPadding = 14.0;
+const _modalContentVerticalPadding = 14.0;
+const _modalPreviewSafetyReserve = 12.0;
+const _modalMinPreviewHeight = 1.0;
+const _emojiPickerReservedHeight = 320.0;
+const _modalToPickerGap = 8.0;
+
+double _modalMessageLineHeight(BuildContext context, Color textColor) {
+  final style = context.typographyScaled.medium16Compact.copyWith(color: textColor);
+  final tp = TextPainter(
+    text: TextSpan(text: ' ', style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+  );
+  try {
+    tp.layout();
+    return tp.preferredLineHeight;
+  } finally {
+    tp.dispose();
+  }
+}
+
+int _modalPreviewContentMaxLines(
+  BuildContext context, {
+  required double slotHeight,
+  required bool isOwnMessage,
+  required bool showAvatar,
+  required String? senderName,
+  required bool hasReplyPreview,
+  required bool hasBubbleMedia,
+  required bool hasBubbleReactions,
+}) {
+  var textBudget =
+      slotHeight -
+      _modalPreviewTopPadding.h -
+      _modalPreviewBottomPadding.h -
+      _modalPreviewSafetyReserve.h;
+  final hasSender = !isOwnMessage && showAvatar && senderName != null && senderName.isNotEmpty;
+  if (hasSender) {
+    textBudget -= _modalSenderRowHeight.h + _modalSenderGap.h;
+  }
+  if (hasReplyPreview) {
+    textBudget -= _modalSenderGap.h + _modalReplyRowHeight.h;
+  }
+  if (hasBubbleMedia) {
+    textBudget -= _modalSenderGap.h + _modalMediaHeight.h;
+  }
+  if (hasBubbleReactions) {
+    textBudget -= _modalSenderGap.h + _modalReactionsHeight.h;
+  }
+  final colors = context.colors;
+  final textColor = isOwnMessage ? colors.fillContentPrimary : colors.backgroundContentPrimary;
+  final lh = math.max(_modalMessageLineHeight(context, textColor), 1.0);
+  return math.max(1, (textBudget / lh).floor());
+}
 
 class MessageActionsScreen extends HookWidget {
   const MessageActionsScreen({
@@ -175,6 +243,9 @@ class MessageActionsScreen extends HookWidget {
                     senderPictureUrl: senderPictureUrl,
                     isGroupChat: isGroupChat,
                     getChatMessageQuote: getChatMessageQuote,
+                    bottomInset: showEmojiPicker.value
+                        ? _emojiPickerReservedHeight.h + _modalToPickerGap.h
+                        : 0,
                   ),
                 ],
               ),
@@ -206,6 +277,7 @@ class MessageActionsModal extends StatelessWidget {
     this.senderPictureUrl,
     this.isGroupChat = false,
     this.getChatMessageQuote,
+    this.bottomInset = 0,
   });
 
   final ChatMessage message;
@@ -220,6 +292,7 @@ class MessageActionsModal extends StatelessWidget {
   final String? senderPictureUrl;
   final bool isGroupChat;
   final ChatMessageQuoteData? Function(String? replyId)? getChatMessageQuote;
+  final double bottomInset;
 
   static const List<String> reactions = [
     '❤',
@@ -231,97 +304,172 @@ class MessageActionsModal extends StatelessWidget {
     '🦥',
   ];
 
+  double _controlsEstimatedHeight() {
+    var height = _modalSectionSpacing.h + 40.h + _modalSectionSpacing.h + 52.h;
+    if (onReply != null) {
+      height += _modalButtonSpacing.h + 52.h;
+    }
+    if (onDelete != null) {
+      height += _modalButtonSpacing.h + 52.h;
+    }
+    return height;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final replyPreview = message.isReply ? getChatMessageQuote?.call(message.replyToId) : null;
+    final maxSlateHeight = math.max(
+      0.0,
+      MediaQuery.sizeOf(context).height - (2 * _modalViewportVerticalInset.h) - bottomInset,
+    );
 
-    return WnSlate(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(14.w, 14.h, 14.w, 14.h),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ChatMessageBubble(
-              message: message,
-              isOwnMessage: isOwnMessage,
-              currentUserPubkey: currentUserPubkey,
-              showAvatar: shouldShowAvatar(
-                current: message,
-                next: null,
-                isOwnMessage: isOwnMessage,
-                isGroupChat: isGroupChat,
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxSlateHeight),
+      child: LayoutBuilder(
+        builder: (context, slateConstraints) {
+          return WnSlate(
+            shrinkWrapContent: true,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: slateConstraints.maxWidth,
+                maxHeight: math.max(0.0, slateConstraints.maxHeight - 2),
               ),
-              senderName: senderName,
-              senderPictureUrl: senderPictureUrl,
-              isGroupChat: isGroupChat,
-              replyPreview: replyPreview,
-            ),
-            SizedBox(height: 16.h),
-            Row(
-              children: [
-                ...reactions.map(
-                  (emoji) => Expanded(
-                    child: _ReactionButton(
-                      key: Key('reaction_$emoji'),
-                      colors: colors,
-                      emoji: emoji,
-                      isSelected: selectedEmojis.contains(emoji),
-                      onTap: () => onReaction(emoji),
-                    ),
-                  ),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  _modalContentHorizontalPadding.w,
+                  _modalContentVerticalPadding.h,
+                  _modalContentHorizontalPadding.w,
+                  _modalContentVerticalPadding.h,
                 ),
-                Expanded(
-                  child: GestureDetector(
-                    key: const Key('emoji_picker_button'),
-                    onTap: onEmojiPicker,
-                    child: Center(
-                      child: WnIcon(
-                        WnIcons.addEmoji,
-                        color: colors.backgroundContentPrimary,
-                        size: 20.sp,
-                      ),
-                    ),
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, innerConstraints) {
+                    final showAvatar = shouldShowAvatar(
+                      current: message,
+                      next: null,
+                      isOwnMessage: isOwnMessage,
+                      isGroupChat: isGroupChat,
+                    );
+                    final previewMaxHeight = math.max(
+                      0.0,
+                      innerConstraints.maxHeight - _controlsEstimatedHeight(),
+                    );
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (previewMaxHeight >= _modalMinPreviewHeight.h)
+                          ConstrainedBox(
+                            constraints: BoxConstraints(maxHeight: previewMaxHeight),
+                            child: LayoutBuilder(
+                              builder: (context, slotConstraints) {
+                                final maxLines = _modalPreviewContentMaxLines(
+                                  context,
+                                  slotHeight: slotConstraints.maxHeight,
+                                  isOwnMessage: isOwnMessage,
+                                  showAvatar: showAvatar,
+                                  senderName: senderName,
+                                  hasReplyPreview: replyPreview != null,
+                                  hasBubbleMedia: message.mediaAttachments.isNotEmpty,
+                                  hasBubbleReactions: message.reactions.byEmoji.isNotEmpty,
+                                );
+                                final shouldConstrainPreviewLines =
+                                    message.content.runes.length > 32 ||
+                                    message.content.contains('\n') ||
+                                    replyPreview != null ||
+                                    message.mediaAttachments.isNotEmpty ||
+                                    message.reactions.byEmoji.isNotEmpty;
+                                return Align(
+                                  alignment: isOwnMessage ? Alignment.topRight : Alignment.topLeft,
+                                  heightFactor: 1,
+                                  child: ChatMessageBubble(
+                                    message: message,
+                                    isOwnMessage: isOwnMessage,
+                                    currentUserPubkey: currentUserPubkey,
+                                    showAvatar: showAvatar,
+                                    senderName: senderName,
+                                    senderPictureUrl: senderPictureUrl,
+                                    isGroupChat: isGroupChat,
+                                    replyPreview: replyPreview,
+                                    contentMaxLines: shouldConstrainPreviewLines ? maxLines : null,
+                                    bubbleWidthFactor: 0.865,
+                                    forceTightHeight: true,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        SizedBox(height: _modalSectionSpacing.h),
+                        Row(
+                          children: [
+                            ...reactions.map(
+                              (emoji) => Expanded(
+                                child: _ReactionButton(
+                                  key: Key('reaction_$emoji'),
+                                  colors: colors,
+                                  emoji: emoji,
+                                  isSelected: selectedEmojis.contains(emoji),
+                                  onTap: () => onReaction(emoji),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                key: const Key('emoji_picker_button'),
+                                onTap: onEmojiPicker,
+                                child: Center(
+                                  child: WnIcon(
+                                    WnIcons.addEmoji,
+                                    color: colors.backgroundContentPrimary,
+                                    size: 20.sp,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: _modalSectionSpacing.h),
+                        if (onReply != null) ...[
+                          WnButton(
+                            key: const Key('reply_button'),
+                            text: context.l10n.reply,
+                            type: WnButtonType.outline,
+                            size: WnButtonSize.medium,
+                            trailingIcon: WnIcons.reply,
+                            onPressed: onReply,
+                          ),
+                          Gap(_modalButtonSpacing.h),
+                        ],
+                        WnButton(
+                          key: const Key('copy_button'),
+                          text: context.l10n.copyMessage,
+                          type: WnButtonType.outline,
+                          size: WnButtonSize.medium,
+                          trailingIcon: WnIcons.copy,
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: message.content));
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        if (onDelete != null) ...[
+                          Gap(_modalButtonSpacing.h),
+                          WnButton(
+                            key: const Key('delete_button'),
+                            text: context.l10n.delete,
+                            type: WnButtonType.destructive,
+                            size: WnButtonSize.medium,
+                            trailingIcon: WnIcons.trashCan,
+                            onPressed: onDelete,
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            if (onReply != null)
-              WnButton(
-                key: const Key('reply_button'),
-                text: context.l10n.reply,
-                type: WnButtonType.outline,
-                size: WnButtonSize.medium,
-                trailingIcon: WnIcons.reply,
-                onPressed: onReply,
               ),
-            Gap(8.h),
-            WnButton(
-              key: const Key('copy_button'),
-              text: context.l10n.copyMessage,
-              type: WnButtonType.outline,
-              size: WnButtonSize.medium,
-              trailingIcon: WnIcons.copy,
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: message.content));
-                Navigator.of(context).pop();
-              },
             ),
-            if (onDelete != null) ...[
-              Gap(8.h),
-              WnButton(
-                key: const Key('delete_button'),
-                text: context.l10n.delete,
-                type: WnButtonType.destructive,
-                size: WnButtonSize.medium,
-                trailingIcon: WnIcons.trashCan,
-                onPressed: onDelete,
-              ),
-            ],
-          ],
-        ),
+          );
+        },
       ),
     );
   }

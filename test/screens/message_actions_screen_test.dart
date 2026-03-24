@@ -4,12 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gap/gap.dart';
 import 'package:whitenoise/hooks/use_chat_messages.dart' show ChatMessageQuoteData;
 import 'package:whitenoise/l10n/generated/app_localizations.dart';
 import 'package:whitenoise/screens/message_actions_screen.dart';
+import 'package:whitenoise/src/rust/api/media_files.dart';
 import 'package:whitenoise/src/rust/api/messages.dart';
 import 'package:whitenoise/src/rust/api/metadata.dart';
+import 'package:whitenoise/widgets/chat_message_bubble.dart';
 import 'package:whitenoise/widgets/wn_message_bubble.dart';
+import 'package:whitenoise/widgets/wn_slate.dart';
 import 'package:whitenoise/widgets/wn_system_notice.dart';
 
 import '../test_helpers.dart';
@@ -34,6 +38,8 @@ ChatMessage _createTestMessage({
   ReactionSummary? reactions,
   bool isReply = false,
   String? replyToId,
+  DeliveryStatus? deliveryStatus,
+  List<MediaFile> mediaAttachments = const [],
 }) {
   return ChatMessage(
     id: id,
@@ -46,13 +52,134 @@ ChatMessage _createTestMessage({
     isDeleted: false,
     contentTokens: const [],
     reactions: reactions ?? const ReactionSummary(byEmoji: [], userReactions: []),
-    mediaAttachments: const [],
+    mediaAttachments: mediaAttachments,
     kind: 9,
+    deliveryStatus: deliveryStatus,
   );
 }
 
+MediaFile _mediaFile(String id) => MediaFile(
+  id: id,
+  mlsGroupId: testGroupId,
+  accountPubkey: testPubkeyA,
+  filePath: '/test/path/$id.jpg',
+  originalFileHash: 'hash$id',
+  encryptedFileHash: 'encrypted$id',
+  mimeType: 'image/jpeg',
+  mediaType: 'image',
+  blossomUrl: 'https://example.com/$id',
+  nostrKey: 'nostr$id',
+  createdAt: DateTime(2024),
+);
+
 void main() {
   group('MessageActionsModal', () {
+    testWidgets('does not stretch to max height for short messages', (tester) async {
+      await mountWidget(
+        MessageActionsModal(
+          message: _createTestMessage(content: 'short'),
+          isOwnMessage: true,
+          onReaction: (_) {},
+          onEmojiPicker: () {},
+          currentUserPubkey: testPubkeyA,
+        ),
+        tester,
+      );
+
+      final viewportHeight = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      // Intentionally mirrors MessageActionsModal viewport inset (96.h top + 96.h bottom).
+      final expectedMaxHeight = viewportHeight - (2 * 96.h);
+      final slateHeight = tester.getSize(find.byType(WnSlate)).height;
+
+      expect(slateHeight, lessThan(expectedMaxHeight - 1));
+    });
+
+    testWidgets('limits preview by modal max height and truncates long text', (tester) async {
+      final veryLongContent = List.filled(500, 'very-long-message-token').join(' ');
+
+      await mountWidget(
+        MessageActionsModal(
+          message: _createTestMessage(
+            content: veryLongContent,
+            deliveryStatus: const DeliveryStatus.failed(reason: 'timeout'),
+          ),
+          isOwnMessage: true,
+          onReaction: (_) {},
+          onEmojiPicker: () {},
+          currentUserPubkey: testPubkeyA,
+        ),
+        tester,
+      );
+
+      final viewportHeight = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      // Intentionally mirrors MessageActionsModal viewport inset (96.h top + 96.h bottom).
+      final expectedMaxHeight = viewportHeight - (2 * 96.h);
+
+      final constrainedBoxes = tester.widgetList<ConstrainedBox>(
+        find.descendant(
+          of: find.byType(MessageActionsModal),
+          matching: find.byType(ConstrainedBox),
+        ),
+      );
+      final hasExpectedMaxHeight = constrainedBoxes.any(
+        (box) =>
+            box.constraints.maxHeight.isFinite &&
+            (box.constraints.maxHeight - expectedMaxHeight).abs() < 0.01,
+      );
+      expect(hasExpectedMaxHeight, isTrue);
+
+      final longMessageFinder = find.descendant(
+        of: find.byType(MessageActionsModal),
+        matching: find.textContaining('very-long-message-token', findRichText: true),
+      );
+      expect(longMessageFinder, findsAtLeastNWidgets(1));
+
+      final longMessageWidgets = longMessageFinder
+          .evaluate()
+          .map((element) => element.widget)
+          .toList();
+      final hasEllipsizedText =
+          longMessageWidgets.whereType<Text>().any(
+            (text) => text.maxLines != null && text.overflow == TextOverflow.ellipsis,
+          ) ||
+          longMessageWidgets.whereType<RichText>().any(
+            (text) => text.maxLines != null && text.overflow == TextOverflow.ellipsis,
+          );
+      expect(hasEllipsizedText, isTrue);
+      expect(find.byKey(const Key('message_status_row')), findsOneWidget);
+    });
+
+    testWidgets('reduces modal max height when bottom inset is provided', (tester) async {
+      final longContent = List.filled(500, 'very-long-message-token').join(' ');
+
+      await mountWidget(
+        MessageActionsModal(
+          message: _createTestMessage(content: longContent),
+          isOwnMessage: true,
+          onReaction: (_) {},
+          onEmojiPicker: () {},
+          currentUserPubkey: testPubkeyA,
+        ),
+        tester,
+      );
+      final fullHeight = tester.getSize(find.byType(WnSlate)).height;
+
+      await mountWidget(
+        MessageActionsModal(
+          message: _createTestMessage(content: longContent),
+          isOwnMessage: true,
+          onReaction: (_) {},
+          onEmojiPicker: () {},
+          currentUserPubkey: testPubkeyA,
+          bottomInset: 200.h,
+        ),
+        tester,
+      );
+      final insetHeight = tester.getSize(find.byType(WnSlate)).height;
+
+      expect(insetHeight, lessThan(fullHeight));
+    });
+
     testWidgets('displays message content', (tester) async {
       await mountWidget(
         MessageActionsModal(
@@ -204,6 +331,147 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(replyCalled, isTrue);
+      });
+    });
+
+    group('modal spacing and preview constraints', () {
+      testWidgets('does not add button gap before copy when reply is absent', (tester) async {
+        await mountWidget(
+          MessageActionsModal(
+            message: _createTestMessage(),
+            isOwnMessage: false,
+            onReaction: (_) {},
+            onEmojiPicker: () {},
+            currentUserPubkey: testPubkeyA,
+          ),
+          tester,
+        );
+
+        final modalSubtree = find.descendant(
+          of: find.byType(MessageActionsModal),
+          matching: find.byType(Gap),
+        );
+        expect(modalSubtree, findsNothing);
+      });
+
+      testWidgets('adds exactly one button gap between reply and copy when reply is present', (
+        tester,
+      ) async {
+        await mountWidget(
+          MessageActionsModal(
+            message: _createTestMessage(),
+            isOwnMessage: false,
+            onReaction: (_) {},
+            onEmojiPicker: () {},
+            currentUserPubkey: testPubkeyA,
+            onReply: () {},
+          ),
+          tester,
+        );
+
+        final gaps = tester
+            .widgetList<Gap>(
+              find.descendant(
+                of: find.byType(MessageActionsModal),
+                matching: find.byType(Gap),
+              ),
+            )
+            .toList();
+        expect(gaps, hasLength(1));
+      });
+
+      testWidgets('does not constrain preview lines for short plain text message', (tester) async {
+        await mountWidget(
+          MessageActionsModal(
+            message: _createTestMessage(content: 'short plain text'),
+            isOwnMessage: true,
+            onReaction: (_) {},
+            onEmojiPicker: () {},
+            currentUserPubkey: testPubkeyA,
+          ),
+          tester,
+        );
+
+        final bubble = tester.widget<ChatMessageBubble>(find.byType(ChatMessageBubble));
+        expect(bubble.contentMaxLines, isNull);
+      });
+
+      testWidgets('constrains preview lines for long message', (tester) async {
+        final longContent = List.filled(120, 'token').join(' ');
+        await mountWidget(
+          MessageActionsModal(
+            message: _createTestMessage(content: longContent),
+            isOwnMessage: true,
+            onReaction: (_) {},
+            onEmojiPicker: () {},
+            currentUserPubkey: testPubkeyA,
+          ),
+          tester,
+        );
+
+        final bubble = tester.widget<ChatMessageBubble>(find.byType(ChatMessageBubble));
+        expect(bubble.contentMaxLines, isNotNull);
+        expect(bubble.contentMaxLines!, greaterThan(0));
+      });
+
+      testWidgets('constrains preview lines when message contains media', (tester) async {
+        await mountWidget(
+          MessageActionsModal(
+            message: _createTestMessage(
+              content: 'caption',
+              mediaAttachments: [_mediaFile('1')],
+            ),
+            isOwnMessage: true,
+            onReaction: (_) {},
+            onEmojiPicker: () {},
+            currentUserPubkey: testPubkeyA,
+          ),
+          tester,
+        );
+
+        final bubble = tester.widget<ChatMessageBubble>(find.byType(ChatMessageBubble));
+        expect(bubble.contentMaxLines, isNotNull);
+        expect(bubble.contentMaxLines!, greaterThan(0));
+      });
+
+      testWidgets('constrains preview lines for short multiline message', (tester) async {
+        final multilineContent = List.filled(16, 'a').join('\n');
+        await mountWidget(
+          MessageActionsModal(
+            message: _createTestMessage(content: multilineContent),
+            isOwnMessage: true,
+            onReaction: (_) {},
+            onEmojiPicker: () {},
+            currentUserPubkey: testPubkeyA,
+          ),
+          tester,
+        );
+
+        final bubble = tester.widget<ChatMessageBubble>(find.byType(ChatMessageBubble));
+        expect(bubble.contentMaxLines, isNotNull);
+        expect(bubble.contentMaxLines!, greaterThan(0));
+      });
+
+      testWidgets('skips preview bubble when no vertical space remains', (tester) async {
+        await mountWidget(
+          SizedBox(
+            height: 120,
+            child: MessageActionsModal(
+              message: _createTestMessage(
+                id: 'tight-space-msg',
+                content: 'preview',
+              ),
+              isOwnMessage: true,
+              onReaction: (_) {},
+              onEmojiPicker: () {},
+              currentUserPubkey: testPubkeyA,
+            ),
+          ),
+          tester,
+        );
+
+        expect(find.byType(ChatMessageBubble), findsNothing);
+        expect(tester.takeException(), isNull);
       });
     });
 
@@ -987,13 +1255,14 @@ void main() {
       Future<void> openEmojiPicker(
         WidgetTester tester, {
         Future<void> Function(String)? onAddReaction,
+        ChatMessage? message,
       }) async {
         await mountShowTest(
           tester,
           builder: (context) => ElevatedButton(
             onPressed: () => MessageActionsScreen.show(
               context,
-              message: _createTestMessage(),
+              message: message ?? _createTestMessage(),
               pubkey: testPubkeyA,
               onAddReaction: onAddReaction ?? (_) async {},
               onRemoveReaction: (_) async {},
@@ -1048,6 +1317,19 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('Test message content'), findsOneWidget);
+      });
+
+      testWidgets('long message does not overflow when emoji picker is open', (tester) async {
+        final longMessage = _createTestMessage(
+          content: List.filled(800, 'very-long-message-token').join(' '),
+          deliveryStatus: const DeliveryStatus.failed(reason: 'timeout'),
+        );
+
+        await openEmojiPicker(tester, message: longMessage);
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('very-long-message-token', findRichText: true), findsWidgets);
+        expect(tester.takeException(), isNull);
       });
 
       testWidgets('selecting emoji invokes onAddReaction and closes screen', (tester) async {
